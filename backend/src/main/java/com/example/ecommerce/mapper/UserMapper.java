@@ -21,15 +21,21 @@ public interface UserMapper {
                                                           // 'active' property
     @Mapping(target = "createdAt", source = "user.createdAt")
     // Business Profile Fields
+    @Mapping(target = "profileId", source = "profile.id")
     @Mapping(target = "companyName", source = "profile.businessName")
     @Mapping(target = "officeAddress", source = "profile.officeAddress")
+    @Mapping(target = "storageAddress", source = "profile.storageAddress")
     @Mapping(target = "businessStatus", source = "profile.status")
+    @Mapping(target = "rejectionReason", source = "profile.rejectionReason")
     UserDTO toDTO(User user, BusinessProfile profile);
 
     // Profile 없이 User만 있을 경우
+    @Mapping(target = "profileId", ignore = true)
     @Mapping(target = "companyName", ignore = true)
     @Mapping(target = "officeAddress", ignore = true)
+    @Mapping(target = "storageAddress", ignore = true)
     @Mapping(target = "businessStatus", ignore = true)
+    @Mapping(target = "rejectionReason", ignore = true)
     @Mapping(target = "isActive", source = "user.active")
     UserDTO toDTO(User user);
 }

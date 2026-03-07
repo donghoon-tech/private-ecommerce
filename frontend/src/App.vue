@@ -4,16 +4,21 @@ import { ref, onMounted } from 'vue'
 
 const isLoggedIn = ref(false)
 const username = ref('')
+const userRole = ref('')
 
 const checkLoginStatus = () => {
   const token = localStorage.getItem('token')
   const storedUsername = localStorage.getItem('username')
+  const storedRole = localStorage.getItem('role') // Retrieve role
+  
   if (token) {
     isLoggedIn.value = true
     username.value = storedUsername || '사용자'
+    userRole.value = storedRole || ''
   } else {
     isLoggedIn.value = false
     username.value = ''
+    userRole.value = ''
   }
 }
 
@@ -36,10 +41,12 @@ onMounted(() => {
   <div class="bg-gray-100 min-h-screen text-gray-800">
      <nav class="bg-white shadow">
        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-         <div class="flex items-center space-x-8">
+         <div class="flex items-center space-x-6">
            <router-link to="/" class="text-2xl font-bold text-indigo-600">가설라인</router-link>
            <router-link to="/" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품목록</router-link>
            <router-link to="/product/register" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품등록</router-link>
+           <router-link v-if="isLoggedIn && userRole === 'ROLE_ADMIN'" to="/admin/orders" class="text-gray-600 hover:text-indigo-600 font-semibold transition">주문 관리</router-link>
+           <router-link v-if="isLoggedIn && userRole === 'ROLE_ADMIN'" to="/admin/users" class="text-gray-600 hover:text-indigo-600 font-semibold transition">사용자 관리</router-link>
          </div>
          <div class="flex items-center space-x-6">
            <template v-if="!isLoggedIn">

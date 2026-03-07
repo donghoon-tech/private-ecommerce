@@ -63,6 +63,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/register").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Admin only
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
                         UsernamePasswordAuthenticationFilter.class);

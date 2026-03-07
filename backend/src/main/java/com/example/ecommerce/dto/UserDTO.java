@@ -25,7 +25,10 @@ public class UserDTO {
     private LocalDateTime createdAt;
 
     // Main Business Profile 정보 (Option)
+    private UUID profileId; // business_profiles.id
     private String companyName; // business_profiles.business_name
     private String officeAddress;
-    private String businessStatus; // business_profiles.status
+    private String storageAddress;
+    private String businessStatus; // business_profiles.status (pending/approved/rejected)
+    private String rejectionReason;
 }

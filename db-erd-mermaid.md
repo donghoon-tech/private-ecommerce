@@ -1,35 +1,65 @@
 erDiagram
+    %% 1. RBAC (Roles & Permissions)
+    roles ||--o{ role_permissions : "assigned_to"
+    permissions ||--o{ role_permissions : "mapped_in"
+    roles ||--o{ users : "defines_role"
+
+    %% 2. User & Profiles
     users ||--o{ business_profiles : "owns"
-    users ||--o{ products : "sells"
-    users ||--o{ orders : "buys"
-    users ||--o{ notifications : "receives"
-    users ||--o{ delivery_addresses : "manages"
-    users ||--o{ cart_items : "has"
     users ||--o{ business_profiles : "approves"
-    users ||--o{ products : "approves"
-    
-    categories ||--o{ categories : "parent_id"
+    users ||--o{ delivery_addresses : "manages"
+
+    %% 3. Products & Categories
+    categories ||--o{ categories : "parent_id (self)"
     categories ||--o{ products : "classifies"
-    
+    users ||--o{ products : "sells"
+    users ||--o{ products : "approves"
     products ||--o{ product_images : "has"
-    products ||--o{ order_items : "referenced_in"
-    products ||--o{ cart_items : "referenced_in"
+
+    %% 4. Cart & Orders
+    users ||--o{ cart_items : "adds"
+    users ||--o{ cart_items : "is_seller_of"
+    products ||--o{ cart_items : "referenced"
     
+    users ||--o{ orders : "buys"
+    users ||--o{ orders : "receives_order"
     orders ||--o{ order_items : "includes"
+    products ||--o{ order_items : "referenced"
     orders ||--o{ order_images : "contains"
-    orders ||--o{ settlements : "generates"
-    orders ||--o{ invoices : "requires"
+    users ||--o{ order_images : "uploaded_by"
+
+    %% 5. Notifications
+    users ||--o{ notifications : "receives"
     orders ||--o{ notifications : "triggers"
-    
+
+    permissions {
+        uuid id PK
+        varchar name "Unique (e.g. MENU:ADMIN)"
+        text description
+        timestamptz created_at
+    }
+
+    roles {
+        uuid id PK
+        varchar name "Unique (UNVERIFIED, USER, ADMIN)"
+        text description
+        timestamptz created_at
+    }
+
+    role_permissions {
+        uuid role_id PK, FK
+        uuid permission_id PK, FK
+    }
+
     users {
         uuid id PK
-        varchar username "Login ID (unique)"
+        uuid role_id FK
+        varchar username "Unique"
         text password_hash
         varchar name
-        varchar representative_phone "Unique/Verified"
+        varchar representative_phone "Unique"
         varchar email
-        varchar role "admin/user"
-        varchar business_number "Required on signup"
+        varchar business_number
         boolean is_active
         timestamptz phone_verified_at
         timestamptz last_login_at
@@ -50,7 +80,7 @@ erDiagram
         varchar status "pending/approved/rejected"
         text rejection_reason
         timestamptz approved_at
-        uuid approved_by FK "references users(id)"
+        uuid approved_by FK
         boolean is_main
         timestamptz created_at
         timestamptz updated_at
@@ -59,8 +89,8 @@ erDiagram
     delivery_addresses {
         uuid id PK
         uuid user_id FK
-        varchar address_name "별칭"
-        text full_address "지도 API 주소"
+        varchar address_name
+        text full_address
         text detail_address
         varchar recipient_name
         varchar recipient_phone
@@ -71,29 +101,29 @@ erDiagram
 
     categories {
         uuid id PK
-        uuid parent_id FK "Self-referencing"
+        uuid parent_id FK
         varchar name
-        int depth "0:구분, 1:품목, 2:규격"
+        int depth "0/1/2"
         int display_order
         timestamptz created_at
     }
 
     products {
         uuid id PK
-        uuid seller_id FK "references users(id)"
+        uuid seller_id FK
         uuid category_id FK
         varchar item_name
         varchar item_condition "신재/고재"
         decimal unit_price
-        varchar sale_unit "참고용"
+        varchar sale_unit
         int stock_quantity
         decimal total_amount
-        text loading_address "지도 API 주소"
-        text loading_address_display "시/구 단위만"
+        text loading_address
+        varchar loading_address_display
         varchar status "pending/approved/rejected/selling/sold_out"
         text rejection_reason
         timestamptz approved_at
-        uuid approved_by FK "references users(id)"
+        uuid approved_by FK
         boolean is_displayed
         timestamptz created_at
         timestamptz updated_at
@@ -111,7 +141,7 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid product_id FK
-        uuid seller_id FK "동일 판매자 체크용"
+        uuid seller_id FK
         int quantity
         timestamptz created_at
         timestamptz updated_at
@@ -119,13 +149,13 @@ erDiagram
 
     orders {
         uuid id PK
-        uuid buyer_id FK "references users(id)"
-        uuid seller_id FK "references users(id)"
+        uuid buyer_id FK
+        uuid seller_id FK
         varchar order_type "platform/phone"
         varchar truck_tonnage
         varchar truck_type "cargo/wingbody"
-        text shipping_loading_address "Snapshot"
-        text shipping_unloading_address "Snapshot"
+        text shipping_loading_address
+        text shipping_unloading_address
         varchar recipient_name
         varchar recipient_phone
         decimal total_amount
@@ -155,7 +185,7 @@ erDiagram
     order_images {
         uuid id PK
         uuid order_id FK
-        uuid uploaded_by FK "references users(id)"
+        uuid uploaded_by FK
         text image_url
         varchar image_type "loading/delivery"
         timestamptz created_at
@@ -165,7 +195,7 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid order_id FK
-        varchar type "delivery_start/payment_confirm/approval..."
+        varchar type
         varchar channel "sms/email"
         text content
         timestamptz sent_at

@@ -4,21 +4,25 @@ import { ref, onMounted } from 'vue'
 
 const isLoggedIn = ref(false)
 const username = ref('')
-const userRole = ref('')
+const userPermissions = ref<string[]>([])
 
 const checkLoginStatus = () => {
   const token = localStorage.getItem('token')
   const storedUsername = localStorage.getItem('username')
-  const storedRole = localStorage.getItem('role') // Retrieve role
+  const storedPermissions = localStorage.getItem('permissions')
   
   if (token) {
     isLoggedIn.value = true
     username.value = storedUsername || '사용자'
-    userRole.value = storedRole || ''
+    try {
+      userPermissions.value = storedPermissions ? JSON.parse(storedPermissions) : []
+    } catch (e) {
+      userPermissions.value = []
+    }
   } else {
     isLoggedIn.value = false
     username.value = ''
-    userRole.value = ''
+    userPermissions.value = []
   }
 }
 
@@ -27,6 +31,7 @@ const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('username')
     localStorage.removeItem('role')
+    localStorage.removeItem('permissions')
     isLoggedIn.value = false
     window.location.href = '/'
   }
@@ -45,8 +50,9 @@ onMounted(() => {
            <router-link to="/" class="text-2xl font-bold text-indigo-600">가설라인</router-link>
            <router-link to="/" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품목록</router-link>
            <router-link to="/product/register" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품등록</router-link>
-           <router-link v-if="isLoggedIn && userRole === 'ROLE_ADMIN'" to="/admin/orders" class="text-gray-600 hover:text-indigo-600 font-semibold transition">주문 관리</router-link>
-           <router-link v-if="isLoggedIn && userRole === 'ROLE_ADMIN'" to="/admin/users" class="text-gray-600 hover:text-indigo-600 font-semibold transition">사용자 관리</router-link>
+           <router-link v-if="isLoggedIn && userPermissions.includes('ORDER:UPDATE')" to="/admin/orders" class="text-gray-600 hover:text-indigo-600 font-semibold transition">주문 관리</router-link>
+           <router-link v-if="isLoggedIn && userPermissions.includes('USER:ACCESS')" to="/admin/users" class="text-gray-600 hover:text-indigo-600 font-semibold transition">사용자 관리</router-link>
+           <router-link v-if="isLoggedIn && userPermissions.includes('AUTH:ACCESS')" to="/admin/roles" class="text-gray-600 hover:text-indigo-600 font-semibold transition">권한 관리</router-link>
          </div>
          <div class="flex items-center space-x-6">
            <template v-if="!isLoggedIn">

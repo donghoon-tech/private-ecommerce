@@ -1,6 +1,8 @@
 <template>
   <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6">사용자 관리</h1>
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-3xl font-bold">사용자 관리</h1>
+    </div>
     
     <!-- Tabs -->
     <div class="mb-6 border-b">
@@ -60,7 +62,7 @@
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.companyName || '-' }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.representativePhone }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {{ user.role === 'admin' ? '관리자' : '일반' }}
+              <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">{{ user.roleDescription || user.role }}</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span 
@@ -137,7 +139,8 @@ interface User {
   name: string
   representativePhone: string
   email: string
-  role: 'admin' | 'user'
+  role: string
+  roleDescription: string
   businessNumber: string
   companyName?: string
   officeAddress?: string

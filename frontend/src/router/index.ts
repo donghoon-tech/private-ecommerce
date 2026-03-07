@@ -70,6 +70,11 @@ const router = createRouter({
             path: '/admin/users/:id',
             name: 'admin-user-detail',
             component: () => import('../views/admin/AdminUserDetailView.vue')
+        },
+        {
+            path: '/admin/roles',
+            name: 'admin-roles',
+            component: () => import('../views/admin/AdminRoleManagementView.vue')
         }
     ]
 })

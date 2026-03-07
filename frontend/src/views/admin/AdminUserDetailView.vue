@@ -13,7 +13,8 @@ interface User {
   name: string
   representativePhone: string
   email: string
-  role: 'admin' | 'user'
+  role: string
+  roleDescription: string
   businessNumber: string
   companyName?: string
   officeAddress?: string
@@ -23,7 +24,14 @@ interface User {
   rejectionReason?: string
 }
 
+interface Role {
+  id: string
+  name: string
+  description: string
+}
+
 const user = ref<User | null>(null)
+const roles = ref<Role[]>([])
 const loading = ref(false)
 
 const fetchUserDetail = async () => {
@@ -35,9 +43,15 @@ const fetchUserDetail = async () => {
     })
     const users = response.data as User[]
     user.value = users.find(u => u.id === route.params.id) || null
+    
+    // Roles 목록도 함께 조회
+    const rolesResponse = await axios.get(`${API_BASE_URL}/api/admin/roles`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    roles.value = rolesResponse.data
   } catch (error) {
-    console.error('사용자 정보 조회 실패:', error)
-    alert('사용자 정보를 불러오는데 실패했습니다.')
+    console.error('정보 조회 실패:', error)
+    alert('정보를 불러오는데 실패했습니다.')
     router.push('/admin/users')
   } finally {
     loading.value = false
@@ -91,11 +105,12 @@ const handleReject = async () => {
   }
 }
 
-const handleRoleChange = async () => {
+const handleRoleChange = async (event: Event) => {
   if (!user.value) return
+  const newRole = (event.target as HTMLSelectElement).value
 
-  const newRole = user.value.role === 'admin' ? 'user' : 'admin'
-  if (!confirm(`${user.value.name}님의 역할을 ${newRole === 'admin' ? '관리자' : '일반 사용자'}로 변경하시겠습니까?`)) {
+  if (!confirm(`${user.value.name}님의 역할을 ${newRole}로 변경하시겠습니까?`)) {
+    // 이전 값으로 복구 (간단히 다시 fetch 하거나 현재 값을 유지)
     return
   }
 
@@ -172,17 +187,18 @@ onMounted(() => {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700">역할</label>
-              <div class="mt-1 flex items-center gap-2">
-                <div class="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-700 sm:text-sm">
-                  {{ user.role === 'admin' ? '관리자' : '일반 사용자' }}
-                </div>
-                <button 
-                  @click="handleRoleChange"
-                  class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none whitespace-nowrap"
+              <label class="block text-sm font-medium text-gray-700">역할 설정</label>
+              <div class="mt-1">
+                <select 
+                  :value="user.role"
+                  @change="handleRoleChange"
+                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-white text-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 >
-                  역할 변경
-                </button>
+                  <option v-for="role in roles" :key="role.id" :value="role.name">
+                    {{ role.description || role.name }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">역할을 변경하면 즉시 반영됩니다.</p>
               </div>
             </div>
           </div>

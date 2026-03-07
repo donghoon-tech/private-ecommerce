@@ -19,12 +19,15 @@ const handleLogin = async () => {
             password: password.value
         })
 
-        const { token, username, role } = response.data
+        const { token, username, role, permissions } = response.data
 
         // 토큰 및 사용자 정보 저장
         localStorage.setItem('token', token)
         localStorage.setItem('username', username)
         localStorage.setItem('role', role)
+        if (permissions) {
+            localStorage.setItem('permissions', JSON.stringify(permissions))
+        }
 
         // axios 헤더 설정 (전역 설정이 있다면 거기서 처리하겠지만, 일단 여기서도 간단히)
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`

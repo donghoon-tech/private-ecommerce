@@ -5,6 +5,7 @@ import com.example.ecommerce.dto.UserDTO;
 import com.example.ecommerce.entity.BusinessProfile;
 import com.example.ecommerce.entity.User;
 import com.example.ecommerce.repository.BusinessProfileRepository;
+import com.example.ecommerce.repository.RoleRepository;
 import com.example.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
     private final UserRepository userRepository;
     private final BusinessProfileRepository businessProfileRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.example.ecommerce.mapper.UserMapper userMapper;
 
@@ -37,7 +39,8 @@ public class AuthService {
                                                 // name이 없었음.
                 .representativePhone(normalizedPhone)
                 .email(request.getEmail())
-                .role(User.Role.user)
+                .role(roleRepository.findByName("UNVERIFIED")
+                        .orElseThrow(() -> new RuntimeException("기본 권한을 찾을 수 없습니다.")))
                 .businessNumber(request.getBusinessNumber())
                 .isActive(true)
                 .build();

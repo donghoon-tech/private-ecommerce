@@ -1,12 +1,12 @@
 package com.example.ecommerce.dto;
 
-import com.example.ecommerce.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -19,7 +19,9 @@ public class UserDTO {
     private String name;
     private String representativePhone;
     private String email;
-    private User.Role role;
+    private String role;
+    private String roleDescription;
+    private List<String> permissions;
     private String businessNumber; // user 테이블의 businessNumber
     private boolean isActive;
     private LocalDateTime createdAt;

@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -36,23 +38,39 @@ public class AuthController {
             Authentication authentication = authenticationManager.authenticate(authenticationToken);
 
             String username = authentication.getName();
+
+            // ROLE_ 로 시작하는 권한(역할) 찾기
             String role = authentication.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
+                    .filter(auth -> auth.startsWith("ROLE_"))
                     .findFirst()
-                    .orElse("ROLE_USER");
+                    .map(auth -> auth.replace("ROLE_", ""))
+                    .orElse("USER");
+
+            // 역할(Role)을 제외한 나머지 모든 실제 액션 퍼미션 수집
+            List<String> permissions = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .filter(auth -> !auth.startsWith("ROLE_"))
+                    .collect(Collectors.toList());
 
             String token = jwtTokenProvider.createToken(username, role);
 
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("username", username);
             response.put("role", role);
+            response.put("permissions", permissions);
 
             return ResponseEntity.ok(response);
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            e.printStackTrace();
             return ResponseEntity.status(401).body(Map.of("message", "아이디 또는 비밀번호가 올바르지 않습니다."));
         } catch (org.springframework.security.core.AuthenticationException e) {
+            e.printStackTrace();
             return ResponseEntity.status(401).body(Map.of("message", "로그인에 실패했습니다."));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("message", "서버 내부 오류: " + e.getMessage()));
         }
     }
 

@@ -23,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
 
         private final UserRepository userRepository;
         private final BusinessProfileRepository businessProfileRepository;
+        private final RoleRepository roleRepository;
         private final CategoryRepository categoryRepository;
         private final ProductRepository productRepository;
         private final ProductImageRepository productImageRepository;
@@ -110,6 +111,20 @@ public class DataInitializer implements CommandLineRunner {
         private List<User> createUsers() {
                 List<User> sellers = new ArrayList<>();
 
+                // 0. Developer
+                if (userRepository.findByUsername("dev").isEmpty()) {
+                        User developer = User.builder()
+                                        .username("dev")
+                                        .passwordHash(passwordEncoder.encode("dev1234"))
+                                        .name("개발자")
+                                        .representativePhone("01099999999")
+                                        .role(roleRepository.findByName("DEVELOPER")
+                                                        .orElseThrow(() -> new RuntimeException("DEVELOPER 롤이 없습니다.")))
+                                        .businessNumber("999-99-99999")
+                                        .build();
+                        userRepository.save(developer);
+                }
+
                 // 1. Admin
                 if (userRepository.findByUsername("admin").isEmpty()) {
                         User admin = User.builder()
@@ -117,7 +132,8 @@ public class DataInitializer implements CommandLineRunner {
                                         .passwordHash(passwordEncoder.encode("admin1234"))
                                         .name("관리자")
                                         .representativePhone("01000000000")
-                                        .role(User.Role.admin)
+                                        .role(roleRepository.findByName("ADMIN")
+                                                        .orElseThrow(() -> new RuntimeException("ADMIN 롤이 없습니다.")))
                                         .businessNumber("000-00-00000")
                                         .build();
                         userRepository.save(admin);
@@ -133,7 +149,8 @@ public class DataInitializer implements CommandLineRunner {
                                         .name("김판매")
                                         .representativePhone("01011111111")
                                         .email("seller@example.com")
-                                        .role(User.Role.user)
+                                        .role(roleRepository.findByName("USER")
+                                                        .orElseThrow(() -> new RuntimeException("USER 롤이 없습니다.")))
                                         .businessNumber("111-11-11111")
                                         .build();
                         userRepository.save(newSeller);
@@ -164,7 +181,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .name("이형제")
                                         .representativePhone("01012345678")
                                         .email("seller2@example.com")
-                                        .role(User.Role.user)
+                                        .role(roleRepository.findByName("USER").orElseThrow())
                                         .businessNumber("222-22-22222")
                                         .build();
                         userRepository.save(newSeller);
@@ -194,7 +211,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .name("박서울")
                                         .representativePhone("01087654321")
                                         .email("seller3@example.com")
-                                        .role(User.Role.user)
+                                        .role(roleRepository.findByName("USER").orElseThrow())
                                         .businessNumber("333-33-33333")
                                         .build();
                         userRepository.save(newSeller);
@@ -224,7 +241,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .name("최구매")
                                         .representativePhone("01022222222")
                                         .email("buyer@example.com")
-                                        .role(User.Role.user)
+                                        .role(roleRepository.findByName("USER").orElseThrow())
                                         .businessNumber("444-44-44444")
                                         .build();
                         userRepository.save(buyer);
@@ -251,7 +268,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .name("정대기")
                                         .representativePhone("01033333333")
                                         .email("pending@example.com")
-                                        .role(User.Role.user)
+                                        .role(roleRepository.findByName("UNVERIFIED").orElseThrow())
                                         .businessNumber("555-55-55555")
                                         .build();
                         userRepository.save(pendingUser);

@@ -32,10 +32,9 @@ public class User {
 
     private String email;
 
-    @Column(nullable = false, length = 20)
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private Role role = Role.user;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @Column(name = "business_number", nullable = false, length = 20)
     private String businessNumber;
@@ -62,7 +61,4 @@ public class User {
     @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-    public enum Role {
-        admin, user
-    }
 }

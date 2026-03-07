@@ -3,8 +3,10 @@ package com.example.ecommerce.service;
 import com.example.ecommerce.dto.UserDTO;
 import com.example.ecommerce.dto.UserUpdateRequest;
 import com.example.ecommerce.entity.BusinessProfile;
+import com.example.ecommerce.entity.Role;
 import com.example.ecommerce.entity.User;
 import com.example.ecommerce.repository.BusinessProfileRepository;
+import com.example.ecommerce.repository.RoleRepository;
 import com.example.ecommerce.repository.UserRepository;
 import com.example.ecommerce.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserRepository userRepository;
     private final BusinessProfileRepository businessProfileRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.example.ecommerce.mapper.UserMapper userMapper;
     private final JwtTokenProvider jwtTokenProvider;
@@ -98,7 +101,8 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        User.Role newRole = User.Role.valueOf(roleStr.toLowerCase());
+        Role newRole = roleRepository.findByName(roleStr.toUpperCase())
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 권한입니다."));
         user.setRole(newRole);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);

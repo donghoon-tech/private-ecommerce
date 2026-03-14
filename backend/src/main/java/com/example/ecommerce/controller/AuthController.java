@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.HttpHeaders;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,6 +30,20 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final AuthService authService;
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        ResponseCookie cookie = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(Map.of("message", "로그아웃 되었습니다."));
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
@@ -55,13 +71,22 @@ public class AuthController {
 
             String token = jwtTokenProvider.createToken(username, role);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("username", username);
-            response.put("role", role);
-            response.put("permissions", permissions);
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("username", username);
+            responseBody.put("role", role);
+            responseBody.put("permissions", permissions);
 
-            return ResponseEntity.ok(response);
+            ResponseCookie cookie = ResponseCookie.from("jwt", token)
+                    .httpOnly(true)
+                    .secure(false) // HTTPS에서는 true
+                    .path("/")
+                    .maxAge(24 * 60 * 60)
+                    .sameSite("Lax")
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(responseBody);
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
             e.printStackTrace();
             return ResponseEntity.status(401).body(Map.of("message", "아이디 또는 비밀번호가 올바르지 않습니다."));

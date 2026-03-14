@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import axios from 'axios'
-import { useRouter } from 'vue-router'
-
-const API_BASE_URL = 'http://localhost:8080' // Dev environment
-const router = useRouter()
+import api from '../utils/api'
 
 // 상태 관리
 const form = ref({
@@ -31,16 +27,8 @@ const successMsg = ref('')
 // 초기 데이터 로딩
 onMounted(async () => {
     try {
-        const token = localStorage.getItem('token')
-        if (!token) {
-            alert('로그인이 필요합니다.')
-            router.push('/login')
-            return
-        }
-        
-        const res = await axios.get(`${API_BASE_URL}/api/users/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        // interceptor will redirect if unauthenticated
+        const res = await api.get(`/api/users/me`)
         const data = res.data
         
         form.value.id = data.username
@@ -57,12 +45,8 @@ onMounted(async () => {
 
     } catch (e) {
         console.error(e)
-        // 토큰이 만료되었거나 오류 발생 시
-        if (axios.isAxiosError(e) && e.response?.status === 403) {
-             alert('로그인 세션이 만료되었습니다.')
-             localStorage.removeItem('token')
-             router.push('/login')
-        }
+        // 토큰이 만료되었거나 오류 발생 시 (interceptor가 로그인 화면으로 보냄)
+        console.warn('Failed to fetch user data', e)
     }
 })
 
@@ -167,9 +151,8 @@ const handleUpdate = async () => {
   successMsg.value = ''
 
   try {
-      const token = localStorage.getItem('token')
       // API 호출 (Spring Boot) - PUT
-      await axios.put(`${API_BASE_URL}/api/users/me`, {
+      await api.put(`/api/users/me`, {
         password: form.value.password || undefined, // 변경 시에만 전송
         phone: form.value.phoneNumber,
         companyName: form.value.companyName,
@@ -177,8 +160,6 @@ const handleUpdate = async () => {
         businessNumber: form.value.businessNumber,
         businessAddress: form.value.businessAddress,
         yardAddress: form.value.yardAddress
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       })
 
       successMsg.value = '정보가 성공적으로 수정되었습니다.'

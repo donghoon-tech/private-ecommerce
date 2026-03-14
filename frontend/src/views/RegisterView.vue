@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8080' // Dev environment
+import api from '../utils/api'
 
 // 상태 관리
 const form = ref({
@@ -137,7 +135,7 @@ const handleRegister = async () => {
 
   try {
       // API 호출 (Spring Boot)
-      await axios.post(`${API_BASE_URL}/api/auth/register`, {
+      await api.post(`/api/auth/register`, {
         username: form.value.id,
         password: form.value.password,
         phone: form.value.phoneNumber,
@@ -153,9 +151,11 @@ const handleRegister = async () => {
       isRegisterSuccess.value = true
 
   } catch (e: any) {
-    console.error(e)
+    console.error('회원가입 실패:', e)
     if (e.response && e.response.data && e.response.data.message) {
-        errorMsg.value = e.response.data.message
+        errorMsg.value = e.response.data.message // 백엔드에서 온 메시지 (예: 이미 가입된 전화번호입니다.)
+    } else if (e.message) {
+        errorMsg.value = e.message
     } else {
         errorMsg.value = '회원가입 처리 중 오류가 발생했습니다.'
     }

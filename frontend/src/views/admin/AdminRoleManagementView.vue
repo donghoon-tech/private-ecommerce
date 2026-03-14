@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8080'
+import { ref, onMounted } from 'vue'
+import api from '../../utils/api'
 
 interface Permission {
   id: string
@@ -32,10 +30,6 @@ const newRole = ref({ name: '', description: '', permissions: [] as string[] })
 // 수정 중인 Role의 Permission 선택 상태
 const editingPermissions = ref<string[]>([])
 
-const authHeaders = computed(() => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`
-}))
-
 const PROTECTED_ROLES = ['UNVERIFIED', 'USER', 'ADMIN']
 
 onMounted(async () => {
@@ -45,7 +39,7 @@ onMounted(async () => {
 const fetchRoles = async () => {
   loading.value = true
   try {
-    const res = await axios.get(`${API_BASE_URL}/api/admin/roles`, { headers: authHeaders.value })
+    const res = await api.get(`/api/admin/roles`)
     roles.value = res.data
   } catch {
     errorMsg.value = 'Role 목록을 불러오는데 실패했습니다.'
@@ -56,7 +50,7 @@ const fetchRoles = async () => {
 
 const fetchPermissions = async () => {
   try {
-    const res = await axios.get(`${API_BASE_URL}/api/admin/permissions`, { headers: authHeaders.value })
+    const res = await api.get(`/api/admin/permissions`)
     allPermissions.value = res.data
   } catch {
     errorMsg.value = 'Permission 목록을 불러오는데 실패했습니다.'
@@ -86,14 +80,13 @@ const saveRole = async () => {
   errorMsg.value = ''
   successMsg.value = ''
   try {
-    const res = await axios.put(
-      `${API_BASE_URL}/api/admin/roles/${selectedRole.value.id}`,
+    const res = await api.put(
+      `/api/admin/roles/${selectedRole.value.id}`,
       {
         name: selectedRole.value.name,
         description: selectedRole.value.description,
         permissions: editingPermissions.value
-      },
-      { headers: authHeaders.value }
+      }
     )
     // 목록 내 해당 role 업데이트
     const idx = roles.value.findIndex(r => r.id === res.data.id)
@@ -115,7 +108,7 @@ const deleteRole = async (role: Role) => {
   }
   if (!confirm(`"${role.name}" Role을 삭제하시겠습니까?`)) return
   try {
-    await axios.delete(`${API_BASE_URL}/api/admin/roles/${role.id}`, { headers: authHeaders.value })
+    await api.delete(`/api/admin/roles/${role.id}`)
     roles.value = roles.value.filter(r => r.id !== role.id)
     if (selectedRole.value?.id === role.id) selectedRole.value = null
     successMsg.value = '삭제되었습니다.'
@@ -132,10 +125,9 @@ const createRole = async () => {
   saving.value = true
   errorMsg.value = ''
   try {
-    const res = await axios.post(
-      `${API_BASE_URL}/api/admin/roles`,
-      newRole.value,
-      { headers: authHeaders.value }
+    const res = await api.post(
+      `/api/admin/roles`,
+      newRole.value
     )
     roles.value.push(res.data)
     showCreateForm.value = false

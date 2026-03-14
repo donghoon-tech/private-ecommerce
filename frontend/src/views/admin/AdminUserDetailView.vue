@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8080'
+import api from '../../utils/api'
 const route = useRoute()
 const router = useRouter()
 
@@ -37,17 +35,12 @@ const loading = ref(false)
 const fetchUserDetail = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const response = await axios.get(`${API_BASE_URL}/api/admin/users`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    const users = response.data as User[]
-    user.value = users.find(u => u.id === route.params.id) || null
+    // 1. 사용자 상세 정보 조회
+    const response = await api.get(`/api/admin/users/${route.params.id}`)
+    user.value = response.data
     
-    // Roles 목록도 함께 조회
-    const rolesResponse = await axios.get(`${API_BASE_URL}/api/admin/roles`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    // 2. Roles 목록 조회 (역할 변경 드롭다운용)
+    const rolesResponse = await api.get(`/api/admin/roles`)
     roles.value = rolesResponse.data
   } catch (error) {
     console.error('정보 조회 실패:', error)
@@ -67,11 +60,9 @@ const handleApprove = async () => {
   if (!confirm(`${user.value.name}님의 가입을 승인하시겠습니까?`)) return
 
   try {
-    const token = localStorage.getItem('token')
-    await axios.put(
-      `${API_BASE_URL}/api/admin/business-profiles/${user.value.profileId}/approve`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
+    await api.put(
+      `/api/admin/business-profiles/${user.value.profileId}/approve`,
+      {}
     )
     alert('승인되었습니다.')
     router.push('/admin/users')
@@ -91,11 +82,9 @@ const handleReject = async () => {
   if (!reason) return
 
   try {
-    const token = localStorage.getItem('token')
-    await axios.put(
-      `${API_BASE_URL}/api/admin/business-profiles/${user.value.profileId}/reject`,
-      { reason },
-      { headers: { Authorization: `Bearer ${token}` } }
+    await api.put(
+      `/api/admin/business-profiles/${user.value.profileId}/reject`,
+      { reason }
     )
     alert('반려되었습니다.')
     router.push('/admin/users')
@@ -115,11 +104,9 @@ const handleRoleChange = async (event: Event) => {
   }
 
   try {
-    const token = localStorage.getItem('token')
-    await axios.put(
-      `${API_BASE_URL}/api/admin/users/${user.value.id}/role`,
-      { role: newRole },
-      { headers: { Authorization: `Bearer ${token}` } }
+    await api.put(
+      `/api/admin/users/${user.value.id}/role`,
+      { role: newRole }
     )
     alert('역할이 변경되었습니다.')
     user.value.role = newRole
@@ -192,13 +179,14 @@ onMounted(() => {
                 <select 
                   :value="user.role"
                   @change="handleRoleChange"
-                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-white text-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  :disabled="user.role === 'UNVERIFIED'"
+                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-white text-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option v-for="role in roles" :key="role.id" :value="role.name">
                     {{ role.description || role.name }}
                   </option>
                 </select>
-                <p class="mt-1 text-xs text-gray-500">역할을 변경하면 즉시 반영됩니다.</p>
+                <p v-if="user.role !== 'UNVERIFIED'" class="mt-1 text-xs text-gray-500">역할을 변경하면 즉시 반영됩니다.</p>
               </div>
             </div>
           </div>

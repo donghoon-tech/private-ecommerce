@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import axios from 'axios'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-const API_BASE_URL = 'http://localhost:8080'
+import api from '../utils/api'
 
 const id = ref('')
 const phone = ref('')
@@ -25,7 +21,7 @@ const requestVerification = async () => {
     }
 
     try {
-        const res = await axios.post(`${API_BASE_URL}/api/auth/check-user-phone`, {
+        const res = await api.post(`/api/auth/check-user-phone`, {
             username: id.value,
             phone: phone.value
         })
@@ -61,7 +57,7 @@ const handleFindPassword = async () => {
     }
 
     try {
-        const res = await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
+        const res = await api.post(`/api/auth/reset-password`, {
             username: id.value,
             phone: phone.value
         })

@@ -1,36 +1,28 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8080' // Dev environment
+import api from '../utils/api'
+import { useAuthStore } from '../stores/auth'
 
 const id = ref('')
 const password = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
+const authStore = useAuthStore()
 
 const handleLogin = async () => {
     loading.value = true
     errorMsg.value = ''
 
     try {
-        const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+        const response = await api.post(`/api/auth/login`, {
             username: id.value,
             password: password.value
         })
 
-        const { token, username, role, permissions } = response.data
+        const { username, role, permissions } = response.data
 
-        // 토큰 및 사용자 정보 저장
-        localStorage.setItem('token', token)
-        localStorage.setItem('username', username)
-        localStorage.setItem('role', role)
-        if (permissions) {
-            localStorage.setItem('permissions', JSON.stringify(permissions))
-        }
-
-        // axios 헤더 설정 (전역 설정이 있다면 거기서 처리하겠지만, 일단 여기서도 간단히)
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        // Pinia Store 업데이트 (토큰은 백엔드에서 HttpOnly Cookie로 설정됨)
+        authStore.setAuth(username, role, permissions || [])
 
         window.location.href = '/'
 

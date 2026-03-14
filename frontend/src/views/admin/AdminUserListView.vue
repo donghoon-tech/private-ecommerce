@@ -128,9 +128,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '../../utils/api'
 
-const API_BASE_URL = 'http://localhost:8080'
 const router = useRouter()
 
 interface User {
@@ -205,10 +204,7 @@ const getStatusText = (status?: string) => {
 const fetchUsers = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const response = await axios.get(`${API_BASE_URL}/api/admin/users`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    const response = await api.get(`/api/admin/users`)
     users.value = response.data
   } catch (error) {
     console.error('사용자 목록 조회 실패:', error)

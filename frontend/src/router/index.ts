@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,7 +34,8 @@ const router = createRouter({
         {
             path: '/mypage',
             name: 'mypage',
-            component: () => import('../views/MyPageView.vue')
+            component: () => import('../views/MyPageView.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/products/:slug',
@@ -48,35 +50,63 @@ const router = createRouter({
         {
             path: '/orders',
             name: 'orders',
-            component: () => import('../views/OrderListView.vue')
+            component: () => import('../views/OrderListView.vue'),
+            meta: { requiresAuth: true }
         },
         {
             path: '/product/register',
             name: 'product-register',
-            component: () => import('../views/ProductRegisterView.vue')
+            component: () => import('../views/ProductRegisterView.vue'),
+            meta: { requiresAuth: true }
         },
         // Admin Routes
         {
             path: '/admin/orders',
             name: 'admin-orders',
-            component: () => import('../views/admin/AdminOrderListView.vue')
+            component: () => import('../views/admin/AdminOrderListView.vue'),
+            meta: { requiresAuth: true, permission: 'ORDER:UPDATE' }
         },
         {
             path: '/admin/users',
             name: 'admin-users',
-            component: () => import('../views/admin/AdminUserListView.vue')
+            component: () => import('../views/admin/AdminUserListView.vue'),
+            meta: { requiresAuth: true, permission: 'USER:ACCESS' }
         },
         {
             path: '/admin/users/:id',
             name: 'admin-user-detail',
-            component: () => import('../views/admin/AdminUserDetailView.vue')
+            component: () => import('../views/admin/AdminUserDetailView.vue'),
+            meta: { requiresAuth: true, permission: 'USER:ACCESS' }
         },
         {
             path: '/admin/roles',
             name: 'admin-roles',
-            component: () => import('../views/admin/AdminRoleManagementView.vue')
+            component: () => import('../views/admin/AdminRoleManagementView.vue'),
+            meta: { requiresAuth: true, permission: 'AUTH:ACCESS' }
         }
     ]
+})
+
+router.beforeEach((to, _from, next) => {
+    const authStore = useAuthStore()
+    // It's possible auth is not initialized strictly here if it doesn't get called first,
+    // but the pinia stores are reactive. We can ensure init is done.
+    if (!authStore.isLoggedIn && localStorage.getItem('username')) {
+        authStore.initAuth()
+    }
+
+    if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+        next('/login')
+    } else if (to.meta.permission) {
+        const requiredPermission = to.meta.permission as string
+        if (!authStore.permissions.includes(requiredPermission)) {
+            next('/') // or unauthorized page
+        } else {
+            next()
+        }
+    } else {
+        next()
+    }
 })
 
 export default router

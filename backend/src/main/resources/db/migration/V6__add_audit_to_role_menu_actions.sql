@@ -1,0 +1,4 @@
+-- V6__add_audit_to_role_menu_actions.sql
+ALTER TABLE role_menu_actions
+ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL;

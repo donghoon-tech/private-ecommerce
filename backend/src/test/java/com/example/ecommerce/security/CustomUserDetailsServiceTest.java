@@ -1,7 +1,8 @@
 package com.example.ecommerce.security;
 
-import com.example.ecommerce.entity.Permission;
+import com.example.ecommerce.entity.Menu;
 import com.example.ecommerce.entity.Role;
+import com.example.ecommerce.entity.RoleMenuAction;
 import com.example.ecommerce.entity.User;
 import com.example.ecommerce.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -30,13 +31,16 @@ class CustomUserDetailsServiceTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @Test
-    @DisplayName("loadUserByUsername 호출 시 User의 Role과 Permissions가 Authorities로 변환된다")
+    @DisplayName("loadUserByUsername 호출 시 User의 Role과 MenuActions가 Authorities로 변환된다")
     void loadUserByUsername_success() {
         // Given
-        Permission p1 = Permission.builder().name("PRODUCT:READ").build();
-        Permission p2 = Permission.builder().name("PRODUCT:WRITE").build();
+        Menu menu = Menu.builder().menuCode("PRODUCT").build();
+        Role role = Role.builder().name("USER").build();
+        
+        RoleMenuAction action1 = RoleMenuAction.builder()
+                .menu(menu).canRead(true).canCreate(true).build();
 
-        Role role = Role.builder().name("USER").permissions(Set.of(p1, p2)).build();
+        role.setMenuActions(Set.of(action1));
 
         User user = User.builder()
                 .username("testuser")
@@ -52,10 +56,10 @@ class CustomUserDetailsServiceTest {
         // Then
         assertThat(userDetails.getUsername()).isEqualTo("testuser");
         assertThat(userDetails.getPassword()).isEqualTo("hashedPwd");
-        assertThat(userDetails.getAuthorities()).hasSize(3); // ROLE_USER, PRODUCT:READ, PRODUCT:WRITE
+        assertThat(userDetails.getAuthorities()).hasSize(3); // ROLE_USER, PRODUCT:READ, PRODUCT:CREATE
         assertThat(userDetails.getAuthorities())
                 .extracting("authority")
-                .containsExactlyInAnyOrder("ROLE_USER", "PRODUCT:READ", "PRODUCT:WRITE");
+                .containsExactlyInAnyOrder("ROLE_USER", "PRODUCT:READ", "PRODUCT:CREATE");
     }
 
     @Test

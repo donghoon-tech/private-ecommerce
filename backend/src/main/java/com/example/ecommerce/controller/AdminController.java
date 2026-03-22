@@ -43,7 +43,7 @@ public class AdminController {
      * 전체 Role 목록 조회 (사용자 역할 변경용)
      */
     @GetMapping("/roles")
-    @PreAuthorize("hasAuthority('USER:ACCESS')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('USER:ACCESS') or hasAuthority('AUTH:ACCESS') or hasAuthority('M_SYS_AUTH:READ')")
     public ResponseEntity<List<com.example.ecommerce.dto.RoleDTO>> getAllRoles() {
         return ResponseEntity.ok(roleService.getAllRoles());
     }

@@ -51,7 +51,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/register").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasAnyAuthority("USER:ACCESS", "AUTH:ACCESS")
+                        // /api/admin/** 권한 체크는 각 Controller의 @PreAuthorize에 위임합니다
+                        .requestMatchers("/api/admin/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
                         UsernamePasswordAuthenticationFilter.class);

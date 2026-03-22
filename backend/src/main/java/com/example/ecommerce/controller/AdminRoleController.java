@@ -1,7 +1,7 @@
 package com.example.ecommerce.controller;
 
-import com.example.ecommerce.dto.PermissionDTO;
 import com.example.ecommerce.dto.RoleDTO;
+import com.example.ecommerce.dto.RoleMenuActionRequest;
 import com.example.ecommerce.service.RoleService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -16,18 +16,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('AUTH:ACCESS')")
+@PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('AUTH:ACCESS')")
 public class AdminRoleController {
 
     private final RoleService roleService;
 
-    /**
-     * 전체 Permission 목록 조회 (읽기 전용)
-     */
-    @GetMapping("/permissions")
-    public ResponseEntity<List<PermissionDTO>> getAllPermissions() {
-        return ResponseEntity.ok(roleService.getAllPermissions());
-    }
+
 
     /**
      * 특정 Role 조회
@@ -43,7 +37,7 @@ public class AdminRoleController {
     @PostMapping("/roles")
     public ResponseEntity<RoleDTO> createRole(@RequestBody RoleRequest request) {
         return ResponseEntity
-                .ok(roleService.createRole(request.getName(), request.getDescription(), request.getPermissions()));
+                .ok(roleService.createRole(request.getName(), request.getDescription(), request.getMenuActions()));
     }
 
     /**
@@ -52,7 +46,7 @@ public class AdminRoleController {
     @PutMapping("/roles/{roleId}")
     public ResponseEntity<RoleDTO> updateRole(@PathVariable UUID roleId, @RequestBody RoleRequest request) {
         return ResponseEntity.ok(
-                roleService.updateRole(roleId, request.getName(), request.getDescription(), request.getPermissions()));
+                roleService.updateRole(roleId, request.getName(), request.getDescription(), request.getMenuActions()));
     }
 
     /**
@@ -68,6 +62,6 @@ public class AdminRoleController {
     public static class RoleRequest {
         private String name;
         private String description;
-        private List<String> permissions; // e.g. ["PRODUCT:READ", "ORDER:CREATE"]
+        private List<RoleMenuActionRequest> menuActions;
     }
 }

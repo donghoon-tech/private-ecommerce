@@ -1,10 +1,14 @@
 package com.example.ecommerce.service;
 
-import com.example.ecommerce.dto.PermissionDTO;
+
 import com.example.ecommerce.dto.RoleDTO;
-import com.example.ecommerce.entity.Permission;
+import com.example.ecommerce.dto.RoleMenuActionDTO;
+import com.example.ecommerce.dto.RoleMenuActionRequest;
+import com.example.ecommerce.entity.Menu;
 import com.example.ecommerce.entity.Role;
-import com.example.ecommerce.repository.PermissionRepository;
+import com.example.ecommerce.entity.RoleMenuAction;
+import com.example.ecommerce.repository.MenuRepository;
+import com.example.ecommerce.repository.RoleMenuActionRepository;
 import com.example.ecommerce.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,7 +26,8 @@ import java.util.stream.Collectors;
 public class RoleService {
 
     private final RoleRepository roleRepository;
-    private final PermissionRepository permissionRepository;
+    private final MenuRepository menuRepository;
+    private final RoleMenuActionRepository roleMenuActionRepository;
 
     /**
      * 전체 Role 목록 조회 (각 Role에 바인딩된 Permission 포함)
@@ -47,32 +52,23 @@ public class RoleService {
     /**
      * 전체 Permission 목록 조회 (읽기 전용)
      */
-    @Transactional(readOnly = true)
-    public List<PermissionDTO> getAllPermissions() {
-        return permissionRepository.findAll().stream()
-                .map(p -> PermissionDTO.builder()
-                        .id(p.getId())
-                        .name(p.getName())
-                        .description(p.getDescription())
-                        .build())
-                .collect(Collectors.toList());
-    }
 
     /**
      * Role 생성
      */
-    public RoleDTO createRole(String name, String description, List<String> permissionNames) {
+    public RoleDTO createRole(String name, String description, List<RoleMenuActionRequest> actionRequests) {
         if (roleRepository.findByName(name).isPresent()) {
             throw new RuntimeException("이미 존재하는 Role 이름입니다: " + name);
         }
 
-        Set<Permission> permissions = resolvePermissions(permissionNames);
-
         Role role = Role.builder()
                 .name(name.toUpperCase())
                 .description(description)
-                .permissions(permissions)
                 .build();
+        role = roleRepository.save(role);
+
+        Set<RoleMenuAction> menuActions = resolveRoleMenuActions(role, actionRequests);
+        role.setMenuActions(menuActions);
 
         return toDTO(roleRepository.save(role));
     }
@@ -80,7 +76,7 @@ public class RoleService {
     /**
      * Role의 Permission 바인딩 수정 (이름, 설명 포함)
      */
-    public RoleDTO updateRole(UUID roleId, String name, String description, List<String> permissionNames) {
+    public RoleDTO updateRole(UUID roleId, String name, String description, List<RoleMenuActionRequest> actionRequests) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
 
@@ -90,11 +86,12 @@ public class RoleService {
         if (description != null) {
             role.setDescription(description);
         }
-        if (permissionNames != null) {
-            role.setPermissions(resolvePermissions(permissionNames));
+        if (actionRequests != null) {
+            role.getMenuActions().clear();
+            role.getMenuActions().addAll(resolveRoleMenuActions(role, actionRequests));
         }
 
-        return toDTO(role);
+        return toDTO(roleRepository.save(role));
     }
 
     /**
@@ -112,26 +109,46 @@ public class RoleService {
         roleRepository.delete(role);
     }
 
-    private Set<Permission> resolvePermissions(List<String> permissionNames) {
-        if (permissionNames == null || permissionNames.isEmpty()) {
+    private Set<RoleMenuAction> resolveRoleMenuActions(Role role, List<RoleMenuActionRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
             return new HashSet<>();
         }
-        Set<Permission> found = permissionRepository.findByNameIn(permissionNames);
-        if (found.size() != permissionNames.size()) {
-            throw new RuntimeException("일부 Permission 이름이 올바르지 않습니다.");
+        Set<RoleMenuAction> actions = new HashSet<>();
+        for (RoleMenuActionRequest req : requests) {
+            Menu menu = menuRepository.findById(req.getMenuId())
+                    .orElseThrow(() -> new RuntimeException("메뉴를 찾을 수 없습니다 ID: " + req.getMenuId()));
+            actions.add(RoleMenuAction.builder()
+                    .role(role)
+                    .menu(menu)
+                    .canRead(req.isCanRead())
+                    .canCreate(req.isCanCreate())
+                    .canUpdate(req.isCanUpdate())
+                    .canDelete(req.isCanDelete())
+                    .canExcel(req.isCanExcel())
+                    .build());
         }
-        return found;
+        return actions;
     }
 
     private RoleDTO toDTO(Role role) {
+        List<String> permStrings = new java.util.ArrayList<>();
+        if (role.getMenuActions() != null) {
+            for (RoleMenuAction action : role.getMenuActions()) {
+                if (action.getMenu() != null && action.getMenu().getMenuCode() != null) {
+                    String code = action.getMenu().getMenuCode().toUpperCase();
+                    if (action.isCanRead()) permStrings.add(code + ":READ");
+                    if (action.isCanCreate()) permStrings.add(code + ":CREATE");
+                    if (action.isCanUpdate()) permStrings.add(code + ":UPDATE");
+                    if (action.isCanDelete()) permStrings.add(code + ":DELETE");
+                    if (action.isCanExcel()) permStrings.add(code + ":EXCEL");
+                }
+            }
+        }
         return RoleDTO.builder()
                 .id(role.getId())
                 .name(role.getName())
                 .description(role.getDescription())
-                .permissions(role.getPermissions().stream()
-                        .map(Permission::getName)
-                        .sorted()
-                        .collect(Collectors.toList()))
+                .permissions(permStrings)
                 .build();
     }
 }

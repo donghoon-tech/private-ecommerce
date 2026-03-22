@@ -95,7 +95,6 @@ const toggleDropdown = (id: string | null) => {
                  class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center"
                >
                  {{ menu.name }}
-                 <span v-if="menu.children && menu.children.length > 0" class="ml-1 text-xs text-gray-400">▼</span>
                </router-link>
 
                <!-- Dropdown for Submenus -->

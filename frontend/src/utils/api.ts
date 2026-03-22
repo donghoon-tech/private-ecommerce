@@ -11,18 +11,22 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // For 401/403, we should clear auth state.
-      // We will handle redirect in the views or store, but let's clear the Pinia store
-      // Since it's outside a component, we need to import dynamically or use the store
-      // Wait, we can import it here, but Pinia must be installed first
+    if (error.response && parseInt(error.response.status) === 401) {
+      // For 401, we clear auth and redirect softly to avoid violently dropping parallel sockets
       import('../stores/auth').then(({ useAuthStore }) => {
         const authStore = useAuthStore()
         authStore.clearAuth()
         if (window.location.pathname !== '/login') {
-             window.location.href = '/login'
+            import('../router').then(({ default: router }) => {
+                router.push('/login')
+            }).catch(() => {
+                window.location.href = '/login'
+            })
         }
       })
+    } else if (error.response && parseInt(error.response.status) === 403) {
+      // 403 means Forbidden. Do not redirect to login, just alert or return.
+      console.warn('403 Forbidden: API access denied.');
     }
     return Promise.reject(error)
   }

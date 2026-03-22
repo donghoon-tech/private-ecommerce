@@ -79,6 +79,12 @@ const router = createRouter({
             meta: { requiresAuth: true, permission: 'USER:ACCESS' }
         },
         {
+            path: '/admin/menus',
+            name: 'admin-menus',
+            component: () => import('../views/admin/AdminMenuManagementView.vue'),
+            meta: { requiresAuth: true, permission: 'M_SYS_MENU:READ' }
+        },
+        {
             path: '/admin/roles',
             name: 'admin-roles',
             component: () => import('../views/admin/AdminRoleManagementView.vue'),
@@ -99,7 +105,7 @@ router.beforeEach((to, _from, next) => {
         next('/login')
     } else if (to.meta.permission) {
         const requiredPermission = to.meta.permission as string
-        if (!authStore.permissions.includes(requiredPermission)) {
+        if (!authStore.permissions.includes(requiredPermission) && !['ADMIN', 'DEVELOPER'].includes(authStore.role)) {
             next('/') // or unauthorized page
         } else {
             next()

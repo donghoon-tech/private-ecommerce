@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
 import api from './utils/api'
 
+interface Menu {
+  id: string;
+  menuCode: string;
+  name: string;
+  parentId: string | null;
+  sortOrder: number;
+  isVisible: boolean;
+  children?: Menu[];
+}
+
 const authStore = useAuthStore()
+const userMenus = ref<Menu[]>([])
+const activeDropdown = ref<string | null>(null)
 
 const handleLogout = async () => {
   if (confirm('로그아웃 하시겠습니까?')) {
@@ -14,28 +26,101 @@ const handleLogout = async () => {
       console.error('Logout failed on server', e)
     } finally {
       authStore.clearAuth()
+      userMenus.value = []
       window.location.href = '/'
     }
   }
 }
 
-onMounted(() => {
-  authStore.initAuth()
+const fetchUserMenus = async () => {
+  if (!authStore.isLoggedIn) {
+    userMenus.value = []
+    return
+  }
+  try {
+    const res = await api.get('/api/menus/me')
+    userMenus.value = res.data
+  } catch (error) {
+    console.error('Failed to fetch user menus', error)
+  }
+}
+
+watch(() => authStore.isLoggedIn, (newVal) => {
+  if (newVal) fetchUserMenus()
+  else userMenus.value = []
 })
+
+onMounted(async () => {
+  await authStore.initAuth()
+  if (authStore.isLoggedIn) {
+    fetchUserMenus()
+  }
+})
+
+const getPathByMenuCode = (code: string) => {
+  const map: Record<string, string> = {
+    'MENU_PROD_LIST': '/',
+    'MENU_PROD_REG': '/product/register',
+    'MENU_ADM_ORDER': '/admin/orders',
+    'MENU_ADM_USER': '/admin/users',
+    'MENU_ADM_MENU': '/admin/menus',
+    'MENU_ADM_ROLE': '/admin/roles'
+  }
+  return map[code] || '/'
+}
+
+const toggleDropdown = (id: string | null) => {
+  activeDropdown.value = id
+}
 </script>
 
 <template>
   <div class="bg-gray-100 min-h-screen text-gray-800">
-     <nav class="bg-white shadow">
+     <nav class="bg-white shadow relative z-50">
        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
          <div class="flex items-center space-x-6">
            <router-link to="/" class="text-2xl font-bold text-indigo-600">가설라인</router-link>
-           <router-link to="/" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품목록</router-link>
-           <router-link to="/product/register" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품등록</router-link>
-           <router-link v-if="authStore.isLoggedIn && authStore.permissions.includes('ORDER:UPDATE')" to="/admin/orders" class="text-gray-600 hover:text-indigo-600 font-semibold transition">주문 관리</router-link>
-           <router-link v-if="authStore.isLoggedIn && authStore.permissions.includes('USER:ACCESS')" to="/admin/users" class="text-gray-600 hover:text-indigo-600 font-semibold transition">사용자 관리</router-link>
-           <router-link v-if="authStore.isLoggedIn && authStore.permissions.includes('AUTH:ACCESS')" to="/admin/roles" class="text-gray-600 hover:text-indigo-600 font-semibold transition">권한 관리</router-link>
+           
+           <!-- Dynamic Nested Menus -->
+           <template v-if="authStore.isLoggedIn">
+             <div 
+               v-for="menu in userMenus" 
+               :key="menu.id" 
+               class="relative group"
+               @mouseenter="toggleDropdown(menu.id)"
+               @mouseleave="toggleDropdown(null)"
+             >
+               <router-link 
+                 :to="getPathByMenuCode(menu.menuCode)"
+                 class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center"
+               >
+                 {{ menu.name }}
+                 <span v-if="menu.children && menu.children.length > 0" class="ml-1 text-xs text-gray-400">▼</span>
+               </router-link>
+
+               <!-- Dropdown for Submenus -->
+               <div 
+                 v-if="menu.children && menu.children.length > 0"
+                 v-show="activeDropdown === menu.id"
+                 class="absolute left-0 mt-0 w-48 bg-white border border-gray-100 shadow-xl rounded-md py-2 transition-all duration-200"
+               >
+                 <router-link 
+                   v-for="child in menu.children" 
+                   :key="child.id" 
+                   :to="getPathByMenuCode(child.menuCode)"
+                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                 >
+                   {{ child.name }}
+                 </router-link>
+               </div>
+             </div>
+           </template>
+
+           <template v-else>
+             <router-link to="/" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품목록</router-link>
+           </template>
          </div>
+
          <div class="flex items-center space-x-6">
            <template v-if="!authStore.isLoggedIn">
              <router-link to="/login" class="text-gray-600 hover:text-indigo-600 font-medium transition">로그인</router-link>
@@ -81,7 +166,3 @@ onMounted(() => {
      </footer>
   </div>
 </template>
-
-<style>
-/* Global styles if needed */
-</style>

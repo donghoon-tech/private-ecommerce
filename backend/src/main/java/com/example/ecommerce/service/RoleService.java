@@ -117,15 +117,21 @@ public class RoleService {
         for (RoleMenuActionRequest req : requests) {
             Menu menu = menuRepository.findById(req.getMenuId())
                     .orElseThrow(() -> new RuntimeException("메뉴를 찾을 수 없습니다 ID: " + req.getMenuId()));
-            actions.add(RoleMenuAction.builder()
-                    .role(role)
-                    .menu(menu)
-                    .canRead(req.isCanRead())
-                    .canCreate(req.isCanCreate())
-                    .canUpdate(req.isCanUpdate())
-                    .canDelete(req.isCanDelete())
-                    .canExcel(req.isCanExcel())
-                    .build());
+            
+            // Check if action already exists for this role and menu to avoid duplicate key error
+            RoleMenuAction action = roleMenuActionRepository.findByRoleIdAndMenuId(role.getId(), menu.getId())
+                    .orElseGet(() -> RoleMenuAction.builder()
+                            .role(role)
+                            .menu(menu)
+                            .build());
+
+            action.setCanRead(req.isCanRead());
+            action.setCanCreate(req.isCanCreate());
+            action.setCanUpdate(req.isCanUpdate());
+            action.setCanDelete(req.isCanDelete());
+            action.setCanExcel(req.isCanExcel());
+            
+            actions.add(roleMenuActionRepository.save(action));
         }
         return actions;
     }

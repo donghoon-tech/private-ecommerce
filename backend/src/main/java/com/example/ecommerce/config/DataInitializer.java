@@ -109,10 +109,8 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         private List<User> createUsers() {
-                List<User> sellers = new ArrayList<>();
-
                 // 0. Developer
-                if (userRepository.findByUsername("dev").isEmpty()) {
+                userRepository.findByUsername("dev").ifPresentOrElse(u -> {}, () -> {
                         User developer = User.builder()
                                         .username("dev")
                                         .passwordHash(passwordEncoder.encode("dev1234"))
@@ -123,11 +121,13 @@ public class DataInitializer implements CommandLineRunner {
                                         .businessNumber("999-99-99999")
                                         .build();
                         userRepository.save(developer);
-                }
+                });
+
+                List<User> sellers = new ArrayList<>();
 
                 // 1. Admin
-                if (userRepository.findByUsername("admin").isEmpty()) {
-                        User admin = User.builder()
+                User admin = userRepository.findByUsername("admin").orElseGet(() -> {
+                        User newAdmin = User.builder()
                                         .username("admin")
                                         .passwordHash(passwordEncoder.encode("admin1234"))
                                         .name("관리자")
@@ -136,10 +136,8 @@ public class DataInitializer implements CommandLineRunner {
                                                         .orElseThrow(() -> new RuntimeException("ADMIN 롤이 없습니다.")))
                                         .businessNumber("000-00-00000")
                                         .build();
-                        userRepository.save(admin);
-                }
-                Optional<User> adminOptional = userRepository.findByUsername("admin");
-                User admin = adminOptional.orElse(null); // Get admin if exists, otherwise null
+                        return userRepository.save(newAdmin);
+                });
 
                 // 2. Seller 1 (대박자재)
                 User seller1 = userRepository.findByUsername("seller").orElseGet(() -> {
@@ -234,7 +232,7 @@ public class DataInitializer implements CommandLineRunner {
                 sellers.add(seller3);
 
                 // 3. Buyer (구매자)
-                if (userRepository.findByUsername("buyer").isEmpty()) {
+                userRepository.findByUsername("buyer").ifPresentOrElse(u -> {}, () -> {
                         User buyer = User.builder()
                                         .username("buyer")
                                         .passwordHash(passwordEncoder.encode("buyer1234"))
@@ -255,13 +253,13 @@ public class DataInitializer implements CommandLineRunner {
                                         .status(BusinessProfile.Status.approved) // 승인 완료 가정
                                         .isMain(true)
                                         .approvedAt(java.time.LocalDateTime.now())
-                                        .approvedBy(admin)
+                                        .approvedBy(admin) // admin is defined above
                                         .build();
                         businessProfileRepository.save(buyerProfile);
-                }
+                });
 
                 // 4. Pending User (가입 대기 중)
-                if (userRepository.findByUsername("pending_user").isEmpty()) {
+                userRepository.findByUsername("pending_user").ifPresentOrElse(u -> {}, () -> {
                         User pendingUser = User.builder()
                                         .username("pending_user")
                                         .passwordHash(passwordEncoder.encode("user1234"))
@@ -284,7 +282,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .isMain(true)
                                         .build();
                         businessProfileRepository.save(pendingProfile);
-                }
+                });
 
                 return sellers;
         }
@@ -293,15 +291,18 @@ public class DataInitializer implements CommandLineRunner {
                 String[] locations = { "경기도 하남시", "충청북도 음성군", "경상북도 경산시", "경기도 광주시", "경기도 남양주시" };
                 String[] conditions = { "신재", "고재" };
 
+                // 이미 상품 정보가 충분하다면(전체 30개 이상) 초기화 스킵하여 부하 감소
+                if (productRepository.count() >= 30) {
+                        return;
+                }
+
+                List<Product> productsToSave = new ArrayList<>();
+                List<ProductImage> imagesToSave = new ArrayList<>();
+
                 // Randomly distribute ~30 products among sellers
                 for (int i = 0; i < 30; i++) {
                         Category category = categories.get(i % categories.size()); // 랜덤 카테고리
                         User seller = sellers.get(i % sellers.size()); // 랜덤 판매자 (순환)
-
-                        // 해당 판매자가 이미 상품을 가지고 있다면 스킵 (중복 생성 방지 - 단순화된 로직)
-                        if (productRepository.countBySellerId(seller.getId()) > 5) { // 5개 이상이면 충분하다고 판단
-                                continue;
-                        }
 
                         String condition = conditions[i % conditions.length];
 
@@ -322,7 +323,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .isDisplayed(true)
                                         .build();
 
-                        productRepository.save(product);
+                        productsToSave.add(product);
 
                         // 고화질 건설 자재 관련 이미지 URL 목록 (Unsplash)
                         String[] sampleImages = {
@@ -339,7 +340,12 @@ public class DataInitializer implements CommandLineRunner {
                                         .imageUrl(sampleImages[i % sampleImages.length]) // 이미지 순환 할당
                                         .displayOrder(1)
                                         .build();
-                        productImageRepository.save(img1);
+                        imagesToSave.add(img1);
+                }
+
+                if (!productsToSave.isEmpty()) {
+                        productRepository.saveAll(productsToSave);
+                        productImageRepository.saveAll(imagesToSave);
                 }
         }
 }

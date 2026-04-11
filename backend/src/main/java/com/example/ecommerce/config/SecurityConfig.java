@@ -29,6 +29,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final com.example.ecommerce.security.DynamicAuthorizationManager dynamicAuthorizationManager;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -50,9 +51,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/register").permitAll()
-                        .requestMatchers("/api/products/**").authenticated()
-                        // /api/admin/** 권한 체크는 각 Controller의 @PreAuthorize에 위임합니다
-                        .requestMatchers("/api/admin/**").authenticated()
+                        // 동적 권한 관리 매니저 적용
+                        .requestMatchers("/api/**").access(dynamicAuthorizationManager)
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
                         UsernamePasswordAuthenticationFilter.class);

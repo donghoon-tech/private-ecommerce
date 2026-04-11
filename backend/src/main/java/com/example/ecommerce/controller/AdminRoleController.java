@@ -21,10 +21,7 @@ public class AdminRoleController {
 
     private final RoleService roleService;
 
-    @GetMapping("/programs")
-    public ResponseEntity<List<ProgramDTO>> getAllPrograms() {
-        return ResponseEntity.ok(roleService.getAllPrograms());
-    }    /**
+    /**
      * 특정 Role 조회
      */
     @GetMapping("/roles/{roleId}")

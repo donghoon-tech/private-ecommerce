@@ -27,7 +27,6 @@ public class AdminController {
      * 전체 사용자 목록 조회 (BusinessProfile 포함)
      */
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_SYS_AUTH')")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsersWithProfiles());
     }
@@ -36,7 +35,6 @@ public class AdminController {
      * 특정 사용자 상세 조회
      */
     @GetMapping("/users/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_SYS_AUTH')")
     public ResponseEntity<UserDTO> getUserDetail(@PathVariable UUID userId) {
         return ResponseEntity.ok(userService.getUserDetail(userId));
     }
@@ -45,7 +43,6 @@ public class AdminController {
      * 전체 Role 목록 조회 (사용자 역할 변경용)
      */
     @GetMapping("/roles")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('USER:ACCESS') or hasAuthority('AUTH:ACCESS') or hasAuthority('M_SYS_AUTH:READ')")
     public ResponseEntity<List<RoleDTO>> getAllRoles() {
         return ResponseEntity.ok(roleService.getAllRoles());
     }
@@ -54,7 +51,6 @@ public class AdminController {
      * 사용자 역할 변경 (user <-> admin)
      */
     @PutMapping("/users/{userId}/role")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_SYS_AUTH')")
     public ResponseEntity<UserDTO> updateUserRole(
             @PathVariable UUID userId,
             @RequestBody UpdateRoleRequest request) {
@@ -65,7 +61,6 @@ public class AdminController {
      * 사업자 프로필 승인
      */
     @PutMapping("/business-profiles/{profileId}/approve")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_SYS_AUTH')")
     public ResponseEntity<Map<String, String>> approveBusinessProfile(
             @PathVariable UUID profileId,
             @RequestHeader("Authorization") String token) {
@@ -77,7 +72,6 @@ public class AdminController {
      * 사업자 프로필 반려
      */
     @PutMapping("/business-profiles/{profileId}/reject")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_SYS_AUTH')")
     public ResponseEntity<Map<String, String>> rejectBusinessProfile(
             @PathVariable UUID profileId,
             @RequestBody RejectRequest request) {

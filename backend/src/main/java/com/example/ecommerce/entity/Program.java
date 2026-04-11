@@ -33,6 +33,9 @@ public class Program {
     @Column(nullable = false, length = 255)
     private String url;
 
+    @Column(name = "http_method", length = 10)
+    private String httpMethod;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProgramType type;

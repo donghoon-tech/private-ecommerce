@@ -6,11 +6,13 @@ import api from './utils/api'
 
 interface Menu {
   id: string;
-  menuCode: string;
   name: string;
   parentId: string | null;
   sortOrder: number;
   isVisible: boolean;
+  programId?: string;
+  url?: string;
+  programCode?: string;
   children?: Menu[];
 }
 
@@ -50,24 +52,16 @@ watch(() => authStore.isLoggedIn, (newVal) => {
   else userMenus.value = []
 })
 
+watch(() => authStore.permissions, () => {
+  if (authStore.isLoggedIn) fetchUserMenus()
+}, { deep: true })
+
 onMounted(async () => {
   await authStore.initAuth()
   if (authStore.isLoggedIn) {
     fetchUserMenus()
   }
 })
-
-const getPathByMenuCode = (code: string) => {
-  const map: Record<string, string> = {
-    'MENU_PROD_LIST': '/',
-    'MENU_PROD_REG': '/product/register',
-    'MENU_ADM_ORDER': '/admin/orders',
-    'MENU_ADM_USER': '/admin/users',
-    'MENU_ADM_MENU': '/admin/menus',
-    'MENU_ADM_ROLE': '/admin/roles'
-  }
-  return map[code] || '/'
-}
 
 const toggleDropdown = (id: string | null) => {
   activeDropdown.value = id
@@ -90,27 +84,36 @@ const toggleDropdown = (id: string | null) => {
                @mouseenter="toggleDropdown(menu.id)"
                @mouseleave="toggleDropdown(null)"
              >
+               <!-- Single Link (No Submenus) -->
                <router-link 
-                 :to="getPathByMenuCode(menu.menuCode)"
+                 v-if="!menu.children || menu.children.length === 0"
+                 :to="menu.path || '#'"
                  class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center"
                >
                  {{ menu.name }}
                </router-link>
 
-               <!-- Dropdown for Submenus -->
-               <div 
-                 v-if="menu.children && menu.children.length > 0"
-                 v-show="activeDropdown === menu.id"
-                 class="absolute left-0 mt-0 w-48 bg-white border border-gray-100 shadow-xl rounded-md py-2 transition-all duration-200"
-               >
-                 <router-link 
-                   v-for="child in menu.children" 
-                   :key="child.id" 
-                   :to="getPathByMenuCode(child.menuCode)"
-                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+               <!-- Dropdown Parent -->
+               <div v-else>
+                 <span class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center cursor-pointer">
+                   {{ menu.name }}
+                   <svg class="ml-1 w-4 h-4 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                 </span>
+                 
+                 <!-- Submenus -->
+                 <div 
+                   v-show="activeDropdown === menu.id"
+                   class="absolute left-0 mt-0 w-48 bg-white border border-gray-100 shadow-xl rounded-md py-2 transition-all duration-200 z-50"
                  >
-                   {{ child.name }}
-                 </router-link>
+                   <router-link 
+                     v-for="child in menu.children" 
+                     :key="child.id" 
+                     :to="child.path || '#'"
+                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                   >
+                     {{ child.name }}
+                   </router-link>
+                 </div>
                </div>
              </div>
            </template>

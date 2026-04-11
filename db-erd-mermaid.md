@@ -1,7 +1,8 @@
 erDiagram
     %% 1. RBAC (Roles & Permissions)
-    roles ||--o{ role_permissions : "assigned_to"
-    permissions ||--o{ role_permissions : "mapped_in"
+    roles ||--o{ role_menu_actions : "assigned_to"
+    menus ||--o{ role_menu_actions : "actions_of"
+    menus ||--o{ menus : "parent_id (self)"
     roles ||--o{ users : "defines_role"
 
     %% 2. User & Profiles
@@ -32,23 +33,34 @@ erDiagram
     users ||--o{ notifications : "receives"
     orders ||--o{ notifications : "triggers"
 
-    permissions {
-        uuid id PK
-        varchar name "Unique (e.g. MENU:ADMIN)"
-        text description
-        timestamptz created_at
-    }
-
     roles {
         uuid id PK
-        varchar name "Unique (UNVERIFIED, USER, ADMIN)"
+        varchar name "Unique (e.g. ROLE_ADMIN, ROLE_USER)"
         text description
-        timestamptz created_at
+        timestamp created_at
     }
 
-    role_permissions {
-        uuid role_id PK, FK
-        uuid permission_id PK, FK
+    menus {
+        uuid id PK
+        varchar menu_code "Unique (e.g. SYS_AUTH)"
+        varchar name
+        uuid parent_id FK
+        int sort_order
+        boolean is_visible
+        timestamp created_at
+    }
+
+    role_menu_actions {
+        uuid id PK
+        uuid role_id FK
+        uuid menu_id FK
+        boolean can_read
+        boolean can_create
+        boolean can_update
+        boolean can_delete
+        boolean can_excel
+        timestamp created_at
+        timestamp updated_at
     }
 
     users {
@@ -61,11 +73,11 @@ erDiagram
         varchar email
         varchar business_number
         boolean is_active
-        timestamptz phone_verified_at
-        timestamptz last_login_at
+        timestamp phone_verified_at
+        timestamp last_login_at
         int failed_login_count
-        timestamptz created_at
-        timestamptz updated_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     business_profiles {
@@ -79,11 +91,11 @@ erDiagram
         text br_image_url
         varchar status "pending/approved/rejected"
         text rejection_reason
-        timestamptz approved_at
+        timestamp approved_at
         uuid approved_by FK
         boolean is_main
-        timestamptz created_at
-        timestamptz updated_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     delivery_addresses {
@@ -95,17 +107,17 @@ erDiagram
         varchar recipient_name
         varchar recipient_phone
         boolean is_default
-        timestamptz created_at
-        timestamptz updated_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     categories {
         uuid id PK
         uuid parent_id FK
         varchar name
-        int depth "0/1/2"
+        int depth
         int display_order
-        timestamptz created_at
+        timestamp created_at
     }
 
     products {
@@ -122,11 +134,11 @@ erDiagram
         varchar loading_address_display
         varchar status "pending/approved/rejected/selling/sold_out"
         text rejection_reason
-        timestamptz approved_at
+        timestamp approved_at
         uuid approved_by FK
         boolean is_displayed
-        timestamptz created_at
-        timestamptz updated_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     product_images {
@@ -134,7 +146,7 @@ erDiagram
         uuid product_id FK
         text image_url
         int display_order
-        timestamptz created_at
+        timestamp created_at
     }
 
     cart_items {
@@ -143,8 +155,8 @@ erDiagram
         uuid product_id FK
         uuid seller_id FK
         int quantity
-        timestamptz created_at
-        timestamptz updated_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     orders {
@@ -163,11 +175,11 @@ erDiagram
         varchar payment_status "pending/confirmed/settled"
         text order_memo
         text admin_memo
-        timestamptz delivery_started_at
-        timestamptz delivery_completed_at
+        timestamp delivery_started_at
+        timestamp delivery_completed_at
         text carrier_info
-        timestamptz created_at
-        timestamptz updated_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     order_items {
@@ -179,7 +191,7 @@ erDiagram
         decimal price_snapshot
         int quantity
         decimal subtotal
-        timestamptz created_at
+        timestamp created_at
     }
 
     order_images {
@@ -188,7 +200,7 @@ erDiagram
         uuid uploaded_by FK
         text image_url
         varchar image_type "loading/delivery"
-        timestamptz created_at
+        timestamp created_at
     }
 
     notifications {
@@ -198,7 +210,7 @@ erDiagram
         varchar type
         varchar channel "sms/email"
         text content
-        timestamptz sent_at
+        timestamp sent_at
         varchar status "pending/sent/failed"
-        timestamptz created_at
+        timestamp created_at
     }

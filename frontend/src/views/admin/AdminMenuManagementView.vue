@@ -135,23 +135,37 @@
 
               <!-- Parent ID -->
               <div class="col-span-1">
-                <label class="block text-sm font-bold text-gray-700 mb-2">부모 식별자</label>
+                <label class="block text-sm font-bold text-gray-700 mb-2">상위 메뉴</label>
                 <input 
-                  :value="selectedMenu.parentId || '0'" 
+                  :value="selectedMenu.parentId ? (findMenuInTree(menus, selectedMenu.parentId)?.name || '알 수 없음') : '최상위 부모 (None)'" 
                   disabled 
                   type="text" 
                   class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3 text-gray-500 text-sm cursor-not-allowed"
                 >
               </div>
 
-              <!-- Menu Code (Keep for backend logic) -->
+              <!-- Program Selection -->
               <div class="col-span-1">
-                <label class="block text-sm font-bold text-gray-700 mb-2">메뉴 코드</label>
+                <label class="block text-sm font-bold text-gray-700 mb-2">연결 프로그램 (자원)</label>
+                <select 
+                  v-model="form.programId" 
+                  class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none text-sm bg-white"
+                >
+                  <option :value="undefined">없음 (폴더용 메뉴)</option>
+                  <option v-for="prog in programs" :key="prog.id" :value="prog.id">
+                    [{{ prog.type }}] {{ prog.name }} ({{ prog.programCode }})
+                  </option>
+                </select>
+                <p class="text-xs text-gray-400 mt-1">폴더 메뉴인 경우 비워두고, 실제 버튼/기능 메뉴일 경우 선택하세요.</p>
+              </div>
+              <!-- Routing Path -->
+              <div class="col-span-1">
+                <label class="block text-sm font-bold text-gray-700 mb-2">라우팅 경로 (URL Path)</label>
                 <input 
-                  v-model="form.menuCode" 
+                  v-model="form.path" 
                   type="text" 
                   class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none text-sm bg-white"
-                  placeholder="MENU_CODE_EXAMPLE"
+                  placeholder="예: /admin/users 또는 #"
                 >
               </div>
             </div>
@@ -184,13 +198,23 @@
           </div>
           
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">메뉴 코드 *</label>
-            <input v-model="modalForm.menuCode" required type="text" class="w-full border border-gray-200 rounded-lg p-2.5 focus:border-blue-400 outline-none text-sm" placeholder="e.g. MENU_USER_MGT">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">연결 프로그램</label>
+            <select v-model="modalForm.programId" class="w-full border border-gray-200 rounded-lg p-2.5 focus:border-blue-400 outline-none text-sm bg-white">
+              <option :value="undefined">없음 (단순 폴더)</option>
+              <option v-for="prog in programs" :key="prog.id" :value="prog.id">
+                [{{ prog.type }}] {{ prog.name }} ({{ prog.programCode }})
+              </option>
+            </select>
           </div>
           
           <div>
             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">메뉴 명칭 *</label>
             <input v-model="modalForm.name" required type="text" class="w-full border border-gray-200 rounded-lg p-2.5 focus:border-blue-400 outline-none text-sm">
+          </div>
+          
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">라우팅 경로 (URL Path)</label>
+            <input v-model="modalForm.path" type="text" class="w-full border border-gray-200 rounded-lg p-2.5 focus:border-blue-400 outline-none text-sm" placeholder="예: /admin/users 또는 #">
           </div>
           
           <div class="grid grid-cols-2 gap-4">
@@ -223,22 +247,33 @@ import api from '../../utils/api'
 
 interface Menu {
   id: string;
-  menuCode: string;
   name: string;
   parentId: string | null;
   sortOrder: number;
   isVisible: boolean;
+  programId?: string;
+  path?: string;
+  programCode?: string;
   children?: Menu[];
 }
 
+interface ProgramDTO {
+  id: string
+  programCode: string
+  name: string
+  type: string
+}
+
 const menus = ref<Menu[]>([])
+const programs = ref<ProgramDTO[]>([])
 const selectedMenu = ref<Menu | null>(null)
 const expandedNodes = ref<Set<string>>(new Set())
 const isSaving = ref(false)
 const isModalOpen = ref(false)
 
 const form = ref({
-  menuCode: '',
+  programId: undefined as string | undefined,
+  path: '',
   name: '',
   sortOrder: 0,
   isVisible: true
@@ -247,7 +282,7 @@ const form = ref({
 const modalForm = ref({
   parentId: null as string | null,
   parentName: '',
-  menuCode: '',
+  programId: undefined as string | undefined,
   name: '',
   sortOrder: 0,
   isVisible: true
@@ -268,6 +303,15 @@ const fetchMenus = async () => {
   }
 }
 
+const fetchPrograms = async () => {
+  try {
+    const res = await api.get('/api/admin/programs')
+    programs.value = res.data
+  } catch (error) {
+    console.error('Failed to fetch programs')
+  }
+}
+
 const toggleExpand = (id: string) => {
   if (expandedNodes.value.has(id)) {
     expandedNodes.value.delete(id)
@@ -280,7 +324,8 @@ const selectMenu = (menu: Menu) => {
   if (selectedMenu.value?.id === menu.id) {
     selectedMenu.value = null
     form.value = {
-      menuCode: '',
+      programId: undefined,
+      path: '',
       name: '',
       sortOrder: 0,
       isVisible: true
@@ -288,7 +333,8 @@ const selectMenu = (menu: Menu) => {
   } else {
     selectedMenu.value = menu
     form.value = {
-      menuCode: menu.menuCode,
+      programId: menu.programId,
+      path: menu.path || '#',
       name: menu.name,
       sortOrder: menu.sortOrder,
       isVisible: menu.isVisible
@@ -300,7 +346,8 @@ const openCreateModal = (parentId: string | null) => {
   modalForm.value = {
     parentId,
     parentName: '',
-    menuCode: '',
+    programId: undefined,
+    path: '',
     name: '',
     sortOrder: 0,
     isVisible: true
@@ -317,12 +364,13 @@ const openCreateModal = (parentId: string | null) => {
 }
 
 const createMenu = async () => {
-  if (!modalForm.value.menuCode || !modalForm.value.name) return
+  if (!modalForm.value.name) return
   isSaving.value = true
   try {
     await api.post('/api/admin/menus', {
-      menuCode: modalForm.value.menuCode,
+      programId: modalForm.value.programId,
       name: modalForm.value.name,
+      path: modalForm.value.path,
       parentId: modalForm.value.parentId,
       sortOrder: modalForm.value.sortOrder,
       isVisible: modalForm.value.isVisible
@@ -341,8 +389,9 @@ const updateMenu = async () => {
   isSaving.value = true
   try {
     await api.put(`/api/admin/menus/${selectedMenu.value.id}`, {
-      menuCode: form.value.menuCode,
+      programId: form.value.programId,
       name: form.value.name,
+      path: form.value.path,
       parentId: selectedMenu.value.parentId,
       sortOrder: form.value.sortOrder,
       isVisible: form.value.isVisible
@@ -381,6 +430,7 @@ const findMenuInTree = (nodes: Menu[], id: string): Menu | undefined => {
 
 onMounted(() => {
   fetchMenus()
+  fetchPrograms()
 })
 </script>
 

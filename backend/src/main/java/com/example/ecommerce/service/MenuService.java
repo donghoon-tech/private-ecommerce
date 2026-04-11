@@ -11,10 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,9 +25,8 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<MenuDTO> getAllMenuTree() {
-        return menuRepository.findByParentIsNullOrderBySortOrderAsc().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        List<Menu> allMenus = menuRepository.findAllWithProgram();
+        return buildTree(allMenus, null);
     }
 
     @Transactional(readOnly = true)
@@ -42,45 +38,79 @@ public class MenuService {
                 .map(Program::getId)
                 .collect(Collectors.toSet());
 
-        List<Menu> roots = menuRepository.findByParentIsNullOrderBySortOrderAsc();
-        List<MenuDTO> result = new ArrayList<>();
+        List<Menu> allMenus = menuRepository.findAllWithProgram();
         
-        for (Menu root : roots) {
-            if (!root.getIsVisible()) continue;
-            MenuDTO dto = filterMenuTree(root, userProgramIds);
-            if (dto != null) {
-                result.add(dto);
+        // Filter in memory to avoid N+1 and many DB calls
+        List<Menu> filteredMenus = allMenus.stream()
+                .filter(m -> m.getIsVisible())
+                .filter(m -> m.getProgram() == null || userProgramIds.contains(m.getProgram().getId()))
+                .collect(Collectors.toList());
+
+        // Build tree from filtered list
+        List<MenuDTO> tree = buildTree(filteredMenus, userProgramIds);
+        return tree;
+    }
+
+    private List<MenuDTO> buildTree(List<Menu> allMenus, Set<UUID> userProgramIds) {
+        Map<UUID, MenuDTO> dtoMap = new LinkedHashMap<>();
+        
+        // First convert all to DTO
+        for (Menu menu : allMenus) {
+            dtoMap.put(menu.getId(), toDTOOnly(menu));
+        }
+
+        List<MenuDTO> roots = new ArrayList<>();
+        for (Menu menu : allMenus) {
+            MenuDTO current = dtoMap.get(menu.getId());
+            if (menu.getParent() == null) {
+                roots.add(current);
+            } else {
+                MenuDTO parent = dtoMap.get(menu.getParent().getId());
+                if (parent != null) {
+                    if (parent.getChildren() == null) parent.setChildren(new ArrayList<>());
+                    parent.getChildren().add(current);
+                }
+            }
+        }
+
+        // If filtering by programs, we need to prune branches with no leaves
+        if (userProgramIds != null) {
+            return pruneEmptyNodes(roots);
+        }
+
+        return roots;
+    }
+
+    private List<MenuDTO> pruneEmptyNodes(List<MenuDTO> nodes) {
+        List<MenuDTO> result = new ArrayList<>();
+        for (MenuDTO node : nodes) {
+            if (node.getChildren() != null && !node.getChildren().isEmpty()) {
+                List<MenuDTO> validChildren = pruneEmptyNodes(node.getChildren());
+                if (!validChildren.isEmpty()) {
+                    node.setChildren(validChildren);
+                    result.add(node);
+                }
+            } else if (node.getProgramId() != null) {
+                // It's a valid leaf
+                result.add(node);
             }
         }
         return result;
     }
 
-    private MenuDTO filterMenuTree(Menu menu, Set<UUID> userProgramIds) {
-        // If it's a leaf node with a program 
-        if (menu.getProgram() != null) {
-            if (userProgramIds.contains(menu.getProgram().getId())) {
-                return toDTO(menu);
-            }
-            return null; // Don't show if no permission
-        }
-
-        // If it's a folder (no program), check if any children are visible
-        List<MenuDTO> allowedChildren = new ArrayList<>();
-        for (Menu child : menu.getChildren()) {
-            if (!child.getIsVisible()) continue;
-            MenuDTO childDTO = filterMenuTree(child, userProgramIds);
-            if (childDTO != null) {
-                allowedChildren.add(childDTO);
-            }
-        }
-
-        if (allowedChildren.isEmpty()) {
-            return null; // Don't show empty folders
-        }
-
-        MenuDTO dto = toDTO(menu);
-        dto.setChildren(allowedChildren);
-        return dto;
+    private MenuDTO toDTOOnly(Menu menu) {
+        return MenuDTO.builder()
+                .id(menu.getId())
+                .name(menu.getName())
+                .parentId(menu.getParent() != null ? menu.getParent().getId() : null)
+                .sortOrder(menu.getSortOrder())
+                .isVisible(menu.getIsVisible())
+                .programId(menu.getProgram() != null ? menu.getProgram().getId() : null)
+                .path(menu.getPath())
+                .programCode(menu.getProgram() != null ? menu.getProgram().getProgramCode() : null)
+                .createdAt(menu.getCreatedAt())
+                .updatedAt(menu.getUpdatedAt())
+                .build();
     }
 
     public MenuDTO createMenu(UUID parentId, UUID programId, String name, Integer sortOrder, Boolean isVisible, String path) {
@@ -105,7 +135,7 @@ public class MenuService {
                 .path(path)
                 .build();
 
-        return toDTO(menuRepository.save(menu));
+        return toDTOWithChildren(menuRepository.save(menu));
     }
 
     public MenuDTO updateMenu(UUID id, UUID parentId, UUID programId, String name, Integer sortOrder, Boolean isVisible, String path) {
@@ -136,30 +166,18 @@ public class MenuService {
         if (isVisible != null) menu.setIsVisible(isVisible);
         if (path != null) menu.setPath(path);
 
-        return toDTO(menuRepository.save(menu));
+        return toDTOWithChildren(menuRepository.save(menu));
     }
 
     public void deleteMenu(UUID id) {
         menuRepository.deleteById(id);
     }
 
-    private MenuDTO toDTO(Menu menu) {
-        MenuDTO dto = MenuDTO.builder()
-                .id(menu.getId())
-                .name(menu.getName())
-                .parentId(menu.getParent() != null ? menu.getParent().getId() : null)
-                .sortOrder(menu.getSortOrder())
-                .isVisible(menu.getIsVisible())
-                .programId(menu.getProgram() != null ? menu.getProgram().getId() : null)
-                .path(menu.getPath())
-                .programCode(menu.getProgram() != null ? menu.getProgram().getProgramCode() : null)
-                .createdAt(menu.getCreatedAt())
-                .updatedAt(menu.getUpdatedAt())
-                .build();
-        
+    private MenuDTO toDTOWithChildren(Menu menu) {
+        MenuDTO dto = toDTOOnly(menu);
         if (menu.getChildren() != null && !menu.getChildren().isEmpty()) {
             dto.setChildren(menu.getChildren().stream()
-                    .map(this::toDTO)
+                    .map(this::toDTOWithChildren)
                     .collect(Collectors.toList()));
         }
         return dto;

@@ -26,9 +26,7 @@ public class ProductService {
         private final com.example.ecommerce.mapper.ProductMapper productMapper;
 
         public List<ProductDTO> getAllProducts() {
-                List<Product> products = productRepository.findAll().stream()
-                                .filter(Product::isDisplayed)
-                                .collect(Collectors.toList());
+                List<Product> products = productRepository.searchProducts(null, null, null);
                 return toProductDTOs(products);
         }
 
@@ -38,18 +36,12 @@ public class ProductService {
         }
 
         public List<ProductDTO> searchProducts(UUID categoryId, String itemCondition, String itemName) {
-                List<Product> products = productRepository.findAll().stream()
-                                .filter(Product::isDisplayed)
-                                .filter(p -> categoryId == null || (p.getCategory() != null
-                                                && p.getCategory().getId().equals(categoryId)))
-                                .filter(p -> itemCondition == null || p.getItemCondition().equals(itemCondition))
-                                .filter(p -> itemName == null || p.getItemName().contains(itemName))
-                                .collect(Collectors.toList());
+                List<Product> products = productRepository.searchProducts(categoryId, itemCondition, itemName);
                 return toProductDTOs(products);
         }
 
         public ProductDTO getProductById(UUID id) {
-                Product product = productRepository.findById(id)
+                Product product = productRepository.findWithDetailsById(id)
                                 .orElseThrow(() -> new RuntimeException("Product not found"));
                 return toProductDTOs(List.of(product)).get(0);
         }

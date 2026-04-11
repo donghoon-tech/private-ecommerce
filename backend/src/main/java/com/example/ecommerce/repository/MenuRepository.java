@@ -10,4 +10,8 @@ import java.util.UUID;
 @Repository
 public interface MenuRepository extends JpaRepository<Menu, UUID> {
     List<Menu> findByParentIsNullOrderBySortOrderAsc();
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"program", "parent"})
+    @org.springframework.data.jpa.repository.Query("SELECT m FROM Menu m ORDER BY m.sortOrder ASC")
+    List<Menu> findAllWithProgram();
 }

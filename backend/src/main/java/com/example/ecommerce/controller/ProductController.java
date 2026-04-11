@@ -4,6 +4,7 @@ import com.example.ecommerce.dto.ProductDTO;
 import com.example.ecommerce.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_MKT_LIST')")
+@PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_MKT_LIST')")
 public class ProductController {
     private final ProductService productService;
 

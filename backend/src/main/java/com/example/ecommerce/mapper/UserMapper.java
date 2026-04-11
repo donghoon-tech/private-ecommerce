@@ -6,7 +6,10 @@ import com.example.ecommerce.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import com.example.ecommerce.entity.Program;
 
 @Mapper(componentModel = "spring")
@@ -47,12 +50,12 @@ public interface UserMapper {
     @Mapping(target = "permissions", expression = "java(mapPrograms(user.getRole().getPrograms()))")
     UserDTO toDTO(User user);
 
-    default List<String> mapPrograms(java.util.Set<Program> programs) {
+    default List<String> mapPrograms(Set<Program> programs) {
         if (programs == null) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         return programs.stream()
                 .map(p -> p.getProgramCode().toUpperCase())
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
     }
 }

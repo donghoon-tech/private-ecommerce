@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -163,7 +162,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .storageAddress("경기도 하남시 천현동")
                                         .status(BusinessProfile.Status.approved)
                                         .isMain(true)
-                                        .approvedAt(java.time.LocalDateTime.now())
+                                        .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin) // approvedBy는 생략하거나 조회해서 넣어야 함
                                         .build();
                         businessProfileRepository.save(profile);
@@ -193,7 +192,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .storageAddress("경기도 광주시")
                                         .status(BusinessProfile.Status.approved)
                                         .isMain(true)
-                                        .approvedAt(java.time.LocalDateTime.now())
+                                        .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin)
                                         .build();
                         businessProfileRepository.save(profile);
@@ -223,7 +222,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .storageAddress("경기도 남양주시")
                                         .status(BusinessProfile.Status.approved)
                                         .isMain(true)
-                                        .approvedAt(java.time.LocalDateTime.now())
+                                        .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin)
                                         .build();
                         businessProfileRepository.save(profile);
@@ -252,7 +251,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .officeAddress("부산시 해운대구")
                                         .status(BusinessProfile.Status.approved) // 승인 완료 가정
                                         .isMain(true)
-                                        .approvedAt(java.time.LocalDateTime.now())
+                                        .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin) // admin is defined above
                                         .build();
                         businessProfileRepository.save(buyerProfile);
@@ -319,7 +318,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .stockQuantity(100 + i * 10)
                                         .totalAmount(new BigDecimal((i + 1) * 1000 * 100)) // 단순 계산
                                         .status(Product.Status.selling)
-                                        .approvedAt(java.time.LocalDateTime.now())
+                                        .approvedAt(LocalDateTime.now())
                                         .isDisplayed(true)
                                         .build();
 

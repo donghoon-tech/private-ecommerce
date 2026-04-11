@@ -1,9 +1,10 @@
 package com.example.ecommerce.security;
 
-import com.example.ecommerce.entity.User;
+
 import com.example.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -24,7 +25,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         System.out.println("Attempting to load user: " + username);
-        User user = userRepository.findByUsername(username)
+        com.example.ecommerce.entity.User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
                     System.out.println("User not found: " + username);
                     return new UsernameNotFoundException("User not found with username: " + username);
@@ -50,9 +51,9 @@ public class CustomUserDetailsService implements UserDetailsService {
             }
         }
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPasswordHash(),
-                authorities);
+        return User.withUsername(user.getUsername())
+                .password(user.getPasswordHash())
+                .authorities(authorities)
+                .build();
     }
 }

@@ -1,6 +1,7 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.dto.ProductDTO;
+import com.example.ecommerce.mapper.ProductMapper;
 import com.example.ecommerce.entity.BusinessProfile;
 import com.example.ecommerce.entity.Product;
 import com.example.ecommerce.entity.ProductImage;
@@ -11,8 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,7 +26,7 @@ public class ProductService {
         private final ProductRepository productRepository;
         private final ProductImageRepository productImageRepository;
         private final BusinessProfileRepository businessProfileRepository;
-        private final com.example.ecommerce.mapper.ProductMapper productMapper;
+        private final ProductMapper productMapper;
 
         public List<ProductDTO> getAllProducts() {
                 List<Product> products = productRepository.searchProducts(null, null, null);
@@ -48,19 +51,19 @@ public class ProductService {
 
         private List<ProductDTO> toProductDTOs(List<Product> products) {
                 if (products.isEmpty())
-                        return java.util.Collections.emptyList();
+                        return Collections.emptyList();
 
                 List<UUID> productIds = products.stream().map(Product::getId).collect(Collectors.toList());
                 List<UUID> sellerIds = products.stream().map(p -> p.getSeller().getId()).distinct()
                                 .collect(Collectors.toList());
 
                 // 1. 이미지 일괄 조회
-                java.util.Map<UUID, List<ProductImage>> imageMap = productImageRepository.findByProductIdIn(productIds)
+                Map<UUID, List<ProductImage>> imageMap = productImageRepository.findByProductIdIn(productIds)
                                 .stream()
                                 .collect(Collectors.groupingBy(img -> img.getProduct().getId()));
 
                 // 2. 판매자 프로필 일괄 조회
-                java.util.Map<UUID, BusinessProfile> profileMap = businessProfileRepository.findByUserIdIn(sellerIds)
+                Map<UUID, BusinessProfile> profileMap = businessProfileRepository.findByUserIdIn(sellerIds)
                                 .stream()
                                 .filter(BusinessProfile::isMain)
                                 .collect(Collectors.toMap(
@@ -70,7 +73,7 @@ public class ProductService {
 
                 // 3. 매핑
                 return products.stream().map(p -> {
-                        List<String> images = imageMap.getOrDefault(p.getId(), java.util.Collections.emptyList())
+                        List<String> images = imageMap.getOrDefault(p.getId(), Collections.emptyList())
                                         .stream()
                                         .sorted(Comparator.comparingInt(ProductImage::getDisplayOrder))
                                         .map(ProductImage::getImageUrl)

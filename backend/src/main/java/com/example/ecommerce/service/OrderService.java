@@ -1,6 +1,7 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.dto.OrderDTO;
+import com.example.ecommerce.mapper.OrderMapper;
 import com.example.ecommerce.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class OrderService {
     private final OrderRepository orderRepository;
-    private final com.example.ecommerce.mapper.OrderMapper orderMapper;
+    private final OrderMapper orderMapper;
 
     public List<OrderDTO> getMyOrders(UUID userId) {
         return orderRepository.findByBuyerId(userId).stream()

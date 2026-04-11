@@ -1,6 +1,7 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.dto.UserDTO;
+import com.example.ecommerce.mapper.UserMapper;
 import com.example.ecommerce.dto.UserUpdateRequest;
 import com.example.ecommerce.entity.BusinessProfile;
 import com.example.ecommerce.entity.Role;
@@ -27,7 +28,7 @@ public class UserService {
     private final BusinessProfileRepository businessProfileRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final com.example.ecommerce.mapper.UserMapper userMapper;
+    private final UserMapper userMapper;
     private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional(readOnly = true)

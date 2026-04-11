@@ -7,8 +7,10 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -87,10 +89,10 @@ public class AuthController {
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
                     .body(responseBody);
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+        } catch (BadCredentialsException e) {
             e.printStackTrace();
             return ResponseEntity.status(401).body(Map.of("message", "아이디 또는 비밀번호가 올바르지 않습니다."));
-        } catch (org.springframework.security.core.AuthenticationException e) {
+        } catch (AuthenticationException e) {
             e.printStackTrace();
             return ResponseEntity.status(401).body(Map.of("message", "로그인에 실패했습니다."));
         } catch (Exception e) {

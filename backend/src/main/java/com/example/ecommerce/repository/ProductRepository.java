@@ -1,21 +1,16 @@
 package com.example.ecommerce.repository;
 
 import com.example.ecommerce.entity.Product;
+import com.example.ecommerce.entity.Program;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ProductRepository extends JpaRepository<Product, UUID>, ProductRepositoryCustom {
     @EntityGraph(attributePaths = {"category", "seller"})
-    java.util.Optional<Product> findWithDetailsById(UUID id);
-
-    @EntityGraph(attributePaths = {"category", "seller"})
-    List<Product> findByIsDisplayedTrue();
-
-    @Override
-    @EntityGraph(attributePaths = {"category", "seller"})
-    List<Product> findAll();
+    Optional<Product> findWithDetailsById(UUID id);
 
     @EntityGraph(attributePaths = {"category", "seller"})
     List<Product> findBySellerId(UUID sellerId);

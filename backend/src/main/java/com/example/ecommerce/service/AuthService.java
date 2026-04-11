@@ -2,6 +2,7 @@ package com.example.ecommerce.service;
 
 import com.example.ecommerce.controller.AuthController;
 import com.example.ecommerce.dto.UserDTO;
+import com.example.ecommerce.mapper.UserMapper;
 import com.example.ecommerce.entity.BusinessProfile;
 import com.example.ecommerce.entity.User;
 import com.example.ecommerce.repository.BusinessProfileRepository;
@@ -20,7 +21,7 @@ public class AuthService {
     private final BusinessProfileRepository businessProfileRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final com.example.ecommerce.mapper.UserMapper userMapper;
+    private final UserMapper userMapper;
 
     public UserDTO register(AuthController.RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {

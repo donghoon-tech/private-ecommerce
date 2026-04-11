@@ -1,8 +1,7 @@
 package com.example.ecommerce.security;
-
-
 import com.example.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.security.core.GrantedAuthority;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
@@ -24,19 +24,19 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        System.out.println("Attempting to load user: " + username);
+        log.debug("Attempting to load user: {}", username);
         com.example.ecommerce.entity.User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
-                    System.out.println("User not found: " + username);
+                    log.debug("User not found: {}", username);
                     return new UsernameNotFoundException("User not found with username: " + username);
                 });
 
-        System.out.println("User found: " + user.getUsername() + ", Role: " + (user.getRole() != null ? user.getRole().getName() : "NULL"));
+        log.debug("User found: {}, Role: {}", user.getUsername(), (user.getRole() != null ? user.getRole().getName() : "NULL"));
 
         List<GrantedAuthority> authorities = new ArrayList<>();
         if (user.getRole() != null) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().toUpperCase()));
-            System.out.println("Added role authority: ROLE_" + user.getRole().getName().toUpperCase());
+            log.debug("Added role authority: ROLE_{}", user.getRole().getName().toUpperCase());
 
             if (user.getRole().getPrograms() != null) {
                 user.getRole().getPrograms().forEach(program -> {
@@ -47,7 +47,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                     }
                 });
             } else {
-                 System.out.println("Permissions are null for role: " + user.getRole().getName());
+                 log.warn("Permissions are null for role: {}", user.getRole().getName());
             }
         }
 
@@ -57,3 +57,4 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .build();
     }
 }
+

@@ -3,6 +3,7 @@ package com.example.ecommerce.config;
 import com.example.ecommerce.entity.*;
 import com.example.ecommerce.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @Profile("!test") // 테스트 환경에선 실행 X
@@ -34,7 +36,7 @@ public class DataInitializer implements CommandLineRunner {
                 // 기존 데이터 포맷 마이그레이션 (하이픈 제거)
                 fixPhoneNumberFormat();
 
-                System.out.println("Initializing Mock Data...");
+                log.info("Initializing Mock Data...");
 
                 // 1. 카테고리 생성 (존재하면 스킵)
                 List<Category> categories = createCategories();
@@ -45,7 +47,7 @@ public class DataInitializer implements CommandLineRunner {
                 // 3. 상품 생성 (Seller들이 등록) -> 없으면 생성
                 createProducts(sellers, categories);
 
-                System.out.println("Mock Data Initialization Completed!");
+                log.info("Mock Data Initialization Completed!");
         }
 
         private void fixPhoneNumberFormat() {
@@ -60,7 +62,7 @@ public class DataInitializer implements CommandLineRunner {
                 }
                 if (updated) {
                         userRepository.saveAll(users);
-                        System.out.println("Migrated existing phone numbers to plain text format.");
+                        log.info("Migrated existing phone numbers to plain text format.");
                 }
         }
 

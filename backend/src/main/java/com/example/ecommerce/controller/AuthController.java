@@ -5,6 +5,7 @@ import com.example.ecommerce.security.JwtTokenProvider;
 import com.example.ecommerce.service.AuthService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -90,16 +92,17 @@ public class AuthController {
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
                     .body(responseBody);
         } catch (BadCredentialsException e) {
-            e.printStackTrace();
+            log.error("Login failed: Invalid credentials for user {}", loginRequest.getUsername());
             return ResponseEntity.status(401).body(Map.of("message", "아이디 또는 비밀번호가 올바르지 않습니다."));
         } catch (AuthenticationException e) {
-            e.printStackTrace();
+            log.error("Login failed: Authentication error for user {}: {}", loginRequest.getUsername(), e.getMessage());
             return ResponseEntity.status(401).body(Map.of("message", "로그인에 실패했습니다."));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Login failed: Unexpected error for user {}", loginRequest.getUsername(), e);
             return ResponseEntity.status(500).body(Map.of("message", "서버 내부 오류: " + e.getMessage()));
         }
     }
+
 
     @PostMapping("/register")
     public ResponseEntity<UserDTO> register(@RequestBody RegisterRequest registerRequest) {

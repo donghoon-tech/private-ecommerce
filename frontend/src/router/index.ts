@@ -9,7 +9,8 @@ const router = createRouter({
         {
             path: '/',
             name: 'home',
-            component: HomeView
+            component: HomeView,
+            meta: { requiresAuth: true, permission: 'PG_MKT_LIST' }
         },
         {
             path: '/login',
@@ -64,31 +65,31 @@ const router = createRouter({
             path: '/admin/orders',
             name: 'admin-orders',
             component: () => import('../views/admin/AdminOrderListView.vue'),
-            meta: { requiresAuth: true, permission: 'ORDER:UPDATE' }
+            meta: { requiresAuth: true, permission: 'PG_ORDER_LIST' }
         },
         {
             path: '/admin/users',
             name: 'admin-users',
             component: () => import('../views/admin/AdminUserListView.vue'),
-            meta: { requiresAuth: true, permission: 'USER:ACCESS' }
+            meta: { requiresAuth: true, permission: 'PG_SYS_AUTH' }
         },
         {
             path: '/admin/users/:id',
             name: 'admin-user-detail',
             component: () => import('../views/admin/AdminUserDetailView.vue'),
-            meta: { requiresAuth: true, permission: 'USER:ACCESS' }
+            meta: { requiresAuth: true, permission: 'PG_SYS_AUTH' }
         },
         {
             path: '/admin/menus',
             name: 'admin-menus',
             component: () => import('../views/admin/AdminMenuManagementView.vue'),
-            meta: { requiresAuth: true, permission: 'M_SYS_MENU:READ' }
+            meta: { requiresAuth: true, permission: 'PG_SYS_AUTH' }
         },
         {
             path: '/admin/roles',
             name: 'admin-roles',
             component: () => import('../views/admin/AdminRoleManagementView.vue'),
-            meta: { requiresAuth: true, permission: 'AUTH:ACCESS' }
+            meta: { requiresAuth: true, permission: 'PG_SYS_AUTH' }
         }
     ]
 })

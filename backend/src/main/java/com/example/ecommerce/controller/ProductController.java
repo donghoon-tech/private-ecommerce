@@ -12,6 +12,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_MKT_LIST')")
 public class ProductController {
     private final ProductService productService;
 

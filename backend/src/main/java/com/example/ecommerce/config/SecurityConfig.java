@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/register").permitAll()
-                        .requestMatchers("/api/products/**").permitAll()
+                        .requestMatchers("/api/products/**").authenticated()
                         // /api/admin/** 권한 체크는 각 Controller의 @PreAuthorize에 위임합니다
                         .requestMatchers("/api/admin/**").authenticated()
                         .anyRequest().authenticated())

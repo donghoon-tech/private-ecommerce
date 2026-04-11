@@ -29,7 +29,12 @@ public class Role {
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "role_programs",
+            joinColumns = @JoinColumn(name = "role_id"),
+            inverseJoinColumns = @JoinColumn(name = "program_id")
+    )
     @Builder.Default
-    private Set<RoleMenuAction> menuActions = new HashSet<>();
+    private Set<Program> programs = new HashSet<>();
 }

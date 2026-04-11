@@ -37,15 +37,12 @@ public class CustomUserDetailsService implements UserDetailsService {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().toUpperCase()));
             System.out.println("Added role authority: ROLE_" + user.getRole().getName().toUpperCase());
 
-            if (user.getRole().getMenuActions() != null) {
-                user.getRole().getMenuActions().forEach(action -> {
-                    if (action.getMenu() != null && action.getMenu().getMenuCode() != null) {
-                        String c = action.getMenu().getMenuCode().toUpperCase();
-                        if (action.isCanRead()) authorities.add(new SimpleGrantedAuthority(c + ":READ"));
-                        if (action.isCanCreate()) authorities.add(new SimpleGrantedAuthority(c + ":CREATE"));
-                        if (action.isCanUpdate()) authorities.add(new SimpleGrantedAuthority(c + ":UPDATE"));
-                        if (action.isCanDelete()) authorities.add(new SimpleGrantedAuthority(c + ":DELETE"));
-                        if (action.isCanExcel()) authorities.add(new SimpleGrantedAuthority(c + ":EXCEL"));
+            if (user.getRole().getPrograms() != null) {
+                user.getRole().getPrograms().forEach(program -> {
+                    if (program.getProgramCode() != null) {
+                        String c = program.getProgramCode().toUpperCase();
+                        authorities.add(new SimpleGrantedAuthority(c)); // We add the program code directly
+                        authorities.add(new SimpleGrantedAuthority(c + ":READ")); // For backward compatibility if needed
                     }
                 });
             } else {

@@ -1,14 +1,11 @@
 package com.example.ecommerce.service;
 
 
+import com.example.ecommerce.dto.ProgramDTO;
 import com.example.ecommerce.dto.RoleDTO;
-import com.example.ecommerce.dto.RoleMenuActionDTO;
-import com.example.ecommerce.dto.RoleMenuActionRequest;
-import com.example.ecommerce.entity.Menu;
+import com.example.ecommerce.entity.Program;
 import com.example.ecommerce.entity.Role;
-import com.example.ecommerce.entity.RoleMenuAction;
-import com.example.ecommerce.repository.MenuRepository;
-import com.example.ecommerce.repository.RoleMenuActionRepository;
+import com.example.ecommerce.repository.ProgramRepository;
 import com.example.ecommerce.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,11 +23,10 @@ import java.util.stream.Collectors;
 public class RoleService {
 
     private final RoleRepository roleRepository;
-    private final MenuRepository menuRepository;
-    private final RoleMenuActionRepository roleMenuActionRepository;
+    private final ProgramRepository programRepository;
 
     /**
-     * 전체 Role 목록 조회 (각 Role에 바인딩된 Permission 포함)
+     * 전체 Role 목록 조회 (각 Role에 바인딩된 Program 포함)
      */
     @Transactional(readOnly = true)
     public List<RoleDTO> getAllRoles() {
@@ -50,13 +46,19 @@ public class RoleService {
     }
 
     /**
-     * 전체 Permission 목록 조회 (읽기 전용)
+     * 전체 Program 목록 조회 (읽기 전용)
      */
+    @Transactional(readOnly = true)
+    public List<ProgramDTO> getAllPrograms() {
+        return programRepository.findAll().stream()
+                .map(this::toProgramDTO)
+                .collect(Collectors.toList());
+    }
 
     /**
      * Role 생성
      */
-    public RoleDTO createRole(String name, String description, List<RoleMenuActionRequest> actionRequests) {
+    public RoleDTO createRole(String name, String description, List<UUID> programIds) {
         if (roleRepository.findByName(name).isPresent()) {
             throw new RuntimeException("이미 존재하는 Role 이름입니다: " + name);
         }
@@ -67,16 +69,16 @@ public class RoleService {
                 .build();
         role = roleRepository.save(role);
 
-        Set<RoleMenuAction> menuActions = resolveRoleMenuActions(role, actionRequests);
-        role.setMenuActions(menuActions);
+        Set<Program> programs = resolvePrograms(programIds);
+        role.setPrograms(programs);
 
         return toDTO(roleRepository.save(role));
     }
 
     /**
-     * Role의 Permission 바인딩 수정 (이름, 설명 포함)
+     * Role의 Program 바인딩 수정 (이름, 설명 포함)
      */
-    public RoleDTO updateRole(UUID roleId, String name, String description, List<RoleMenuActionRequest> actionRequests) {
+    public RoleDTO updateRole(UUID roleId, String name, String description, List<UUID> programIds) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
 
@@ -86,11 +88,37 @@ public class RoleService {
         if (description != null) {
             role.setDescription(description);
         }
-        if (actionRequests != null) {
-            role.getMenuActions().clear();
-            role.getMenuActions().addAll(resolveRoleMenuActions(role, actionRequests));
+        if (programIds != null) {
+            role.getPrograms().clear();
+            role.getPrograms().addAll(resolvePrograms(programIds));
         }
 
+        return toDTO(roleRepository.save(role));
+    }
+
+    /**
+     * Role에 Program 다중 할당
+     */
+    public RoleDTO assignPrograms(UUID roleId, List<UUID> programIds) {
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
+        
+        Set<Program> newPrograms = resolvePrograms(programIds);
+        role.getPrograms().addAll(newPrograms);
+        
+        return toDTO(roleRepository.save(role));
+    }
+
+    /**
+     * Role에서 Program 다중 회수
+     */
+    public RoleDTO removePrograms(UUID roleId, List<UUID> programIds) {
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
+                
+        Set<Program> programsToRemove = resolvePrograms(programIds);
+        role.getPrograms().removeAll(programsToRemove);
+        
         return toDTO(roleRepository.save(role));
     }
 
@@ -109,52 +137,42 @@ public class RoleService {
         roleRepository.delete(role);
     }
 
-    private Set<RoleMenuAction> resolveRoleMenuActions(Role role, List<RoleMenuActionRequest> requests) {
-        if (requests == null || requests.isEmpty()) {
+    private Set<Program> resolvePrograms(List<UUID> programIds) {
+        if (programIds == null || programIds.isEmpty()) {
             return new HashSet<>();
         }
-        Set<RoleMenuAction> actions = new HashSet<>();
-        for (RoleMenuActionRequest req : requests) {
-            Menu menu = menuRepository.findById(req.getMenuId())
-                    .orElseThrow(() -> new RuntimeException("메뉴를 찾을 수 없습니다 ID: " + req.getMenuId()));
-            
-            // Check if action already exists for this role and menu to avoid duplicate key error
-            RoleMenuAction action = roleMenuActionRepository.findByRoleIdAndMenuId(role.getId(), menu.getId())
-                    .orElseGet(() -> RoleMenuAction.builder()
-                            .role(role)
-                            .menu(menu)
-                            .build());
-
-            action.setCanRead(req.isCanRead());
-            action.setCanCreate(req.isCanCreate());
-            action.setCanUpdate(req.isCanUpdate());
-            action.setCanDelete(req.isCanDelete());
-            action.setCanExcel(req.isCanExcel());
-            
-            actions.add(roleMenuActionRepository.save(action));
-        }
-        return actions;
+        return new HashSet<>(programRepository.findAllById(programIds));
     }
 
     private RoleDTO toDTO(Role role) {
-        List<String> permStrings = new java.util.ArrayList<>();
-        if (role.getMenuActions() != null) {
-            for (RoleMenuAction action : role.getMenuActions()) {
-                if (action.getMenu() != null && action.getMenu().getMenuCode() != null) {
-                    String code = action.getMenu().getMenuCode().toUpperCase();
-                    if (action.isCanRead()) permStrings.add(code + ":READ");
-                    if (action.isCanCreate()) permStrings.add(code + ":CREATE");
-                    if (action.isCanUpdate()) permStrings.add(code + ":UPDATE");
-                    if (action.isCanDelete()) permStrings.add(code + ":DELETE");
-                    if (action.isCanExcel()) permStrings.add(code + ":EXCEL");
-                }
-            }
-        }
+        List<ProgramDTO> programDTOs = role.getPrograms().stream()
+                .map(this::toProgramDTO)
+                .collect(Collectors.toList());
+
+        List<String> permStrings = role.getPrograms().stream()
+                .map(p -> p.getProgramCode().toUpperCase())
+                .collect(Collectors.toList());
+
         return RoleDTO.builder()
                 .id(role.getId())
                 .name(role.getName())
                 .description(role.getDescription())
+                .programs(programDTOs)
                 .permissions(permStrings)
+                .build();
+    }
+
+    private ProgramDTO toProgramDTO(Program program) {
+        return ProgramDTO.builder()
+                .id(program.getId())
+                .category1(program.getCategory1())
+                .category2(program.getCategory2())
+                .programCode(program.getProgramCode())
+                .name(program.getName())
+                .url(program.getUrl())
+                .type(program.getType())
+                .createdAt(program.getCreatedAt())
+                .updatedAt(program.getUpdatedAt())
                 .build();
     }
 }

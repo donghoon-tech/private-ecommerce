@@ -7,15 +7,20 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. 권한 및 역할 관리 (RBAC Core)
 -- ============================================================
 
--- 권한 마스터 테이블: 시스템에서 정의한 최소 기능 단위
-CREATE TABLE permissions (
+-- 시스템 프그램 및 권한 리소스 테이블 (단일 테이블 구조: WEB/API 통합)
+CREATE TABLE programs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    category1 VARCHAR(50), -- 대분류 (WEB용, API는 NULL)
+    category2 VARCHAR(50), -- 중분류 (WEB용, API는 NULL)
+    program_code VARCHAR(50) NOT NULL UNIQUE, -- 프로그램ID (PG_DASH_SUM, API_DASH_STATS 등)
+    name VARCHAR(100) NOT NULL, -- 프로그램명
+    url VARCHAR(255) NOT NULL, -- 프로그램 URL
+    type VARCHAR(20) NOT NULL CHECK (type IN ('WEB', 'API')), -- 프로그램 유형
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE permissions IS '권한 마스터 (예: MENU:ADMIN, ACTION:TRADE 등)';
+COMMENT ON TABLE programs IS '통합 프로그램 마스터 (WEB, API)';
 
 -- 역할 테이블: 권한들의 묶음 (미인증회원, 정회원, 운영자 등)
 CREATE TABLE roles (
@@ -27,11 +32,11 @@ CREATE TABLE roles (
 
 COMMENT ON TABLE roles IS '사용자 역할 (예: UNVERIFIED, USER, ADMIN)';
 
--- 역할별 권한 매핑 테이블 (N:M)
-CREATE TABLE role_permissions (
+-- 역할별 프로그램 할당 테이블 (N:M)
+CREATE TABLE role_programs (
     role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-    PRIMARY KEY (role_id, permission_id)
+    program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, program_id)
 );
 
 -- ============================================================
@@ -236,30 +241,32 @@ CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXE
 -- 7. 초기 시드 데이터 (권한 및 역할)
 -- ============================================================
 
--- 1) 퍼미션 삽입
-INSERT INTO permissions (name, description) VALUES 
-('PRODUCT:READ', '상품 조회'),
-('PRODUCT:UPDATE', '상품 등록/수정'),
-('ORDER:CREATE', '주문'),
-('ORDER:UPDATE', '주문 취소/수정'),
-('USER:ACCESS', '사용자 관리 (관리자용 - 가입 승인/거부, 사용자 조회 등)'),
-('AUTH:ACCESS', '인증 관리 (관리자용 - 역할 및 권한 매핑 관리 등)');
+-- 1) 프로그램 데이터 삽입 (WEB 및 API 통합)
+INSERT INTO programs (category1, category2, program_code, name, url, type) VALUES 
+('대시보드', '업무요약', 'PG_DASH_SUM', '업무 요약 대시보드', 'admin/dash/summary', 'WEB'),
+('자재마켓', '상품 검색/조회', 'PG_MKT_LIST', '상품 검색 및 조회', 'market/product/list', 'WEB'),
+('주문/배차', '주문내역', 'PG_ORDER_LIST', '주문 내역 관리', 'order/history/list', 'WEB'),
+('시스템관리', '권한설정관리', 'PG_SYS_AUTH', '권한 설정 매트릭스', 'admin/system/auth', 'WEB'),
+(NULL, NULL, 'API_DASH_STATS', '대시보드 통계 API', '/api/v1/dash/stats', 'API'),
+(NULL, NULL, 'API_MKT_SEARCH', '마켓 상품 검색 API', '/api/v1/market/search', 'API'),
+(NULL, NULL, 'API_AUTH_SYNC', 'RBAC 권한 동기화 API', '/api/v1/internal/rbac/sync', 'API'),
+(NULL, NULL, 'API_ORDER_DETAIL', '주문 상세 정보 조회 API', '/api/v1/order/detail', 'API');
 
 -- 2) 역할 생성
 INSERT INTO roles (id, name, description) VALUES 
 ('00000000-0000-0000-0000-000000000001', 'UNVERIFIED', '미인증 회원 (조회만 가능)'),
 ('00000000-0000-0000-0000-000000000002', 'USER', '인증 회원 (구매/판매 가능)'),
-('00000000-0000-0000-0000-000000000003', 'ADMIN', '운영자 (모든 권한)');
+('00000000-0000-0000-0000-000000000003', 'ADMIN', '운영자 (모든 프로그램 접근)');
 
--- 3) 역할별 권한 매핑
--- 미인증 회원: 상품 목록만
-INSERT INTO role_permissions (role_id, permission_id) 
-SELECT r.id, p.id FROM roles r, permissions p WHERE r.name = 'UNVERIFIED' AND p.name = 'PRODUCT:READ';
+-- 3) 역할별 프로그램 매핑
+-- 미인증 회원: 상품 검색 API만
+INSERT INTO role_programs (role_id, program_id) 
+SELECT r.id, p.id FROM roles r, programs p WHERE r.name = 'UNVERIFIED' AND p.program_code IN ('API_MKT_SEARCH');
 
--- 인증 회원: 상품 목록 + 거래(구매/판매)
-INSERT INTO role_permissions (role_id, permission_id) 
-SELECT r.id, p.id FROM roles r, permissions p WHERE r.name = 'USER' AND p.name IN ('PRODUCT:READ', 'PRODUCT:UPDATE', 'ORDER:CREATE', 'ORDER:UPDATE');
+-- 인증 회원: 상품 검색/조회 화면 및 API, 주문 화면 및 API
+INSERT INTO role_programs (role_id, program_id) 
+SELECT r.id, p.id FROM roles r, programs p WHERE r.name = 'USER' AND p.program_code IN ('PG_MKT_LIST', 'API_MKT_SEARCH', 'PG_ORDER_LIST', 'API_ORDER_DETAIL');
 
 -- 운영자: 전체
-INSERT INTO role_permissions (role_id, permission_id) 
-SELECT r.id, p.id FROM roles r, permissions p WHERE r.name = 'ADMIN';
+INSERT INTO role_programs (role_id, program_id) 
+SELECT r.id, p.id FROM roles r, programs p WHERE r.name = 'ADMIN';

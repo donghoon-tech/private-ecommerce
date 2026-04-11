@@ -1,7 +1,7 @@
 package com.example.ecommerce.controller;
 
 import com.example.ecommerce.dto.RoleDTO;
-import com.example.ecommerce.dto.RoleMenuActionRequest;
+import com.example.ecommerce.dto.ProgramDTO;
 import com.example.ecommerce.service.RoleService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +21,10 @@ public class AdminRoleController {
 
     private final RoleService roleService;
 
-
-
-    /**
+    @GetMapping("/programs")
+    public ResponseEntity<List<ProgramDTO>> getAllPrograms() {
+        return ResponseEntity.ok(roleService.getAllPrograms());
+    }    /**
      * 특정 Role 조회
      */
     @GetMapping("/roles/{roleId}")
@@ -37,7 +38,7 @@ public class AdminRoleController {
     @PostMapping("/roles")
     public ResponseEntity<RoleDTO> createRole(@RequestBody RoleRequest request) {
         return ResponseEntity
-                .ok(roleService.createRole(request.getName(), request.getDescription(), request.getMenuActions()));
+                .ok(roleService.createRole(request.getName(), request.getDescription(), request.getProgramIds()));
     }
 
     /**
@@ -46,7 +47,23 @@ public class AdminRoleController {
     @PutMapping("/roles/{roleId}")
     public ResponseEntity<RoleDTO> updateRole(@PathVariable UUID roleId, @RequestBody RoleRequest request) {
         return ResponseEntity.ok(
-                roleService.updateRole(roleId, request.getName(), request.getDescription(), request.getMenuActions()));
+                roleService.updateRole(roleId, request.getName(), request.getDescription(), request.getProgramIds()));
+    }
+
+    /**
+     * Role에 Program 할당 (다중)
+     */
+    @PostMapping("/roles/{roleId}/programs")
+    public ResponseEntity<RoleDTO> assignPrograms(@PathVariable UUID roleId, @RequestBody List<UUID> programIds) {
+        return ResponseEntity.ok(roleService.assignPrograms(roleId, programIds));
+    }
+
+    /**
+     * Role에서 Program 회수 (다중)
+     */
+    @DeleteMapping("/roles/{roleId}/programs")
+    public ResponseEntity<RoleDTO> removePrograms(@PathVariable UUID roleId, @RequestBody List<UUID> programIds) {
+        return ResponseEntity.ok(roleService.removePrograms(roleId, programIds));
     }
 
     /**
@@ -62,6 +79,6 @@ public class AdminRoleController {
     public static class RoleRequest {
         private String name;
         private String description;
-        private List<RoleMenuActionRequest> menuActions;
+        private List<UUID> programIds;
     }
 }

@@ -16,5 +16,6 @@ public class RoleDTO {
     private UUID id;
     private String name;
     private String description;
-    private List<String> permissions;
+    private List<ProgramDTO> programs;
+    private List<String> permissions; // for backward compatibility in tokens
 }

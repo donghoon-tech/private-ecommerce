@@ -7,7 +7,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
-import com.example.ecommerce.entity.RoleMenuAction;
+import com.example.ecommerce.entity.Program;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
@@ -20,7 +20,7 @@ public interface UserMapper {
     @Mapping(target = "email", source = "user.email")
     @Mapping(target = "role", source = "user.role.name")
     @Mapping(target = "roleDescription", source = "user.role.description")
-    @Mapping(target = "permissions", expression = "java(mapMenuActions(user.getRole().getMenuActions()))")
+    @Mapping(target = "permissions", expression = "java(mapPrograms(user.getRole().getPrograms()))")
     @Mapping(target = "businessNumber", source = "user.businessNumber")
     @Mapping(target = "isActive", source = "user.active") // Lombok @Builder.Default boolean isActive -> isActive() ->
                                                           // 'active' property
@@ -44,24 +44,15 @@ public interface UserMapper {
     @Mapping(target = "isActive", source = "user.active")
     @Mapping(target = "role", source = "user.role.name")
     @Mapping(target = "roleDescription", source = "user.role.description")
-    @Mapping(target = "permissions", expression = "java(mapMenuActions(user.getRole().getMenuActions()))")
+    @Mapping(target = "permissions", expression = "java(mapPrograms(user.getRole().getPrograms()))")
     UserDTO toDTO(User user);
 
-    default List<String> mapMenuActions(java.util.Set<RoleMenuAction> actions) {
-        if (actions == null) {
+    default List<String> mapPrograms(java.util.Set<Program> programs) {
+        if (programs == null) {
             return java.util.Collections.emptyList();
         }
-        java.util.List<String> perms = new java.util.ArrayList<>();
-        for (RoleMenuAction action : actions) {
-            if (action.getMenu() != null && action.getMenu().getMenuCode() != null) {
-                String c = action.getMenu().getMenuCode().toUpperCase();
-                if (action.isCanRead()) perms.add(c + ":READ");
-                if (action.isCanCreate()) perms.add(c + ":CREATE");
-                if (action.isCanUpdate()) perms.add(c + ":UPDATE");
-                if (action.isCanDelete()) perms.add(c + ":DELETE");
-                if (action.isCanExcel()) perms.add(c + ":EXCEL");
-            }
-        }
-        return perms;
+        return programs.stream()
+                .map(p -> p.getProgramCode().toUpperCase())
+                .collect(java.util.stream.Collectors.toList());
     }
 }

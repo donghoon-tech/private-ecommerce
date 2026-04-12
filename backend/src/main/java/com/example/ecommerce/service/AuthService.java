@@ -1,6 +1,6 @@
 package com.example.ecommerce.service;
 
-import com.example.ecommerce.controller.AuthController;
+import com.example.ecommerce.dto.request.RegisterRequest;
 import com.example.ecommerce.dto.UserDTO;
 import com.example.ecommerce.mapper.UserMapper;
 import com.example.ecommerce.entity.BusinessProfile;
@@ -23,7 +23,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
-    public UserDTO register(AuthController.RegisterRequest request) {
+    public UserDTO register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("이미 존재하는 아이디입니다.");
         }

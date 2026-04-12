@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.ecommerce.dto.request.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -141,50 +142,5 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
         String tempPassword = authService.resetPassword(request.getUsername(), request.getPhone());
         return ResponseEntity.ok(Map.of("tempPassword", tempPassword));
-    }
-
-    @Data
-    public static class LoginRequest {
-        private String username;
-        private String password;
-    }
-
-    @Data
-    public static class RegisterRequest {
-        private String username;
-        private String password;
-        private String phone; // 필수
-        private String companyName;
-        private String email;
-        private String businessNumber;
-        private String businessAddress;
-        private String yardAddress;
-    }
-
-    @Data
-    public static class FindIdRequest {
-        private String phone;
-    }
-
-    @Data
-    public static class CheckPhoneRequest {
-        private String phone;
-    }
-
-    @Data
-    public static class CheckUserPhoneRequest {
-        private String username;
-        private String phone;
-    }
-
-    @Data
-    public static class ResetPasswordRequest {
-        private String username;
-        private String phone;
-    }
-
-    @Data
-    public static class CheckUsernameRequest {
-        private String username;
     }
 }

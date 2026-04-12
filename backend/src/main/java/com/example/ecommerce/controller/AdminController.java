@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.example.ecommerce.dto.request.UpdateRoleRequest;
+import com.example.ecommerce.dto.request.RejectRequest;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -78,15 +80,5 @@ public class AdminController {
             @RequestBody RejectRequest request) {
         userService.rejectBusinessProfile(profileId, request.getReason());
         return ResponseEntity.ok(Map.of("message", "반려되었습니다."));
-    }
-
-    @Data
-    public static class UpdateRoleRequest {
-        private String role; // "admin" or "user"
-    }
-
-    @Data
-    public static class RejectRequest {
-        private String reason;
     }
 }

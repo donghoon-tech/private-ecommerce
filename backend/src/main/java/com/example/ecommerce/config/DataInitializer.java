@@ -33,9 +33,6 @@ public class DataInitializer implements CommandLineRunner {
         @Override
         @Transactional
         public void run(String... args) throws Exception {
-                // 기존 데이터 포맷 마이그레이션 (하이픈 제거)
-                fixPhoneNumberFormat();
-
                 log.info("Initializing Mock Data...");
 
                 // 1. 카테고리 생성 (존재하면 스킵)
@@ -48,22 +45,6 @@ public class DataInitializer implements CommandLineRunner {
                 createProducts(sellers, categories);
 
                 log.info("Mock Data Initialization Completed!");
-        }
-
-        private void fixPhoneNumberFormat() {
-                List<User> users = userRepository.findAll();
-                boolean updated = false;
-                for (User user : users) {
-                        String phone = user.getRepresentativePhone();
-                        if (phone != null && phone.contains("-")) {
-                                user.setRepresentativePhone(phone.replaceAll("-", ""));
-                                updated = true;
-                        }
-                }
-                if (updated) {
-                        userRepository.saveAll(users);
-                        log.info("Migrated existing phone numbers to plain text format.");
-                }
         }
 
         private List<Category> createCategories() {

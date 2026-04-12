@@ -1,5 +1,6 @@
 package com.example.ecommerce.entity;
 
+import com.example.ecommerce.config.PhoneEncryptorConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,7 +28,8 @@ public class User extends BaseEntity {
     @Column(nullable = true, length = 100)
     private String name;
 
-    @Column(name = "representative_phone", nullable = false, unique = true, length = 20)
+    @Convert(converter = PhoneEncryptorConverter.class)
+    @Column(name = "representative_phone", nullable = false, unique = true, length = 500)
     private String representativePhone;
 
     private String email;

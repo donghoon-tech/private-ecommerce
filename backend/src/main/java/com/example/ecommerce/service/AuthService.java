@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.ecommerce.util.ValidationUtils;
+import com.example.ecommerce.util.PhoneEncryptor;
 import com.example.ecommerce.constant.AppConstants;
 import com.example.ecommerce.constant.ErrorMessage;
 import com.example.ecommerce.dto.request.LoginRequest;
@@ -40,6 +41,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final PhoneEncryptor phoneEncryptor;
 
     public LoginResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -80,7 +82,7 @@ public class AuthService {
             throw new DuplicateException(ErrorMessage.ID_ALREADY_EXISTS);
         }
         String normalizedPhone = ValidationUtils.normalizePhone(request.getPhone());
-        if (userRepository.existsByRepresentativePhone(normalizedPhone)) {
+        if (userRepository.existsByRepresentativePhone(phoneEncryptor.encryptForSearch(normalizedPhone))) {
             throw new DuplicateException(ErrorMessage.PHONE_ALREADY_EXISTS);
         }
 
@@ -130,13 +132,15 @@ public class AuthService {
     }
 
     public String findId(String phone) {
-        return userRepository.findByRepresentativePhone(ValidationUtils.normalizePhone(phone))
+        String normalizedPhone = ValidationUtils.normalizePhone(phone);
+        return userRepository.findByRepresentativePhone(phoneEncryptor.encryptForSearch(normalizedPhone))
                 .map(User::getUsername)
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
     }
 
     public boolean checkPhoneExists(String phone) {
-        return userRepository.existsByRepresentativePhone(ValidationUtils.normalizePhone(phone));
+        return userRepository.existsByRepresentativePhone(
+                phoneEncryptor.encryptForSearch(ValidationUtils.normalizePhone(phone)));
     }
 
     public boolean checkUsernameExists(String username) {
@@ -146,20 +150,16 @@ public class AuthService {
     public boolean checkUserAndPhoneExists(String username, String phone) {
         String cleanInputPhone = ValidationUtils.normalizePhone(phone);
         return userRepository.findByUsername(username)
-                .map(u -> {
-                    String cleanUserPhone = ValidationUtils.normalizePhone(u.getRepresentativePhone());
-                    return cleanUserPhone.equals(cleanInputPhone);
-                })
+                .map(u -> cleanInputPhone.equals(
+                        ValidationUtils.normalizePhone(u.getRepresentativePhone())))
                 .orElse(false);
     }
 
     public String resetPassword(String username, String phone) {
         String cleanInputPhone = ValidationUtils.normalizePhone(phone);
         User user = userRepository.findByUsername(username)
-                .filter(u -> {
-                    String cleanUserPhone = ValidationUtils.normalizePhone(u.getRepresentativePhone());
-                    return cleanUserPhone.equals(cleanInputPhone);
-                })
+                .filter(u -> cleanInputPhone.equals(
+                        ValidationUtils.normalizePhone(u.getRepresentativePhone())))
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
 
         String tempPassword = generateRandomPassword();

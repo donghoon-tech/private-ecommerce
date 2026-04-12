@@ -74,7 +74,7 @@ public class UserService {
         if (request.getName() != null)
             user.setName(request.getName());
         if (request.getRepresentativePhone() != null)
-            user.setRepresentativePhone(request.getRepresentativePhone());
+            user.setRepresentativePhone(ValidationUtils.normalizePhone(request.getRepresentativePhone()));
         if (request.getEmail() != null)
             user.setEmail(request.getEmail());
 

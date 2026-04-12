@@ -9,7 +9,6 @@ import com.example.ecommerce.entity.User;
 import com.example.ecommerce.repository.BusinessProfileRepository;
 import com.example.ecommerce.repository.RoleRepository;
 import com.example.ecommerce.repository.UserRepository;
-import com.example.ecommerce.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,7 +28,6 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional(readOnly = true)
     public UserDTO getMyInfo(String username) {
@@ -131,12 +129,10 @@ public class UserService {
     /**
      * 관리자: 사업자 프로필 승인
      */
-    public void approveBusinessProfile(UUID profileId, String token) {
+    public void approveBusinessProfile(UUID profileId, String adminUsername) {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("프로필을 찾을 수 없습니다."));
 
-        // JWT에서 관리자 username 추출
-        String adminUsername = jwtTokenProvider.getUsername(token.replace("Bearer ", ""));
         User admin = userRepository.findByUsername(adminUsername)
                 .orElseThrow(() -> new RuntimeException("관리자를 찾을 수 없습니다."));
 

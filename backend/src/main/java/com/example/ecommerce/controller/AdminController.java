@@ -7,8 +7,9 @@ import com.example.ecommerce.service.UserService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -63,8 +64,8 @@ public class AdminController {
     @PutMapping("/business-profiles/{profileId}/approve")
     public ResponseEntity<Map<String, String>> approveBusinessProfile(
             @PathVariable UUID profileId,
-            @RequestHeader("Authorization") String token) {
-        userService.approveBusinessProfile(profileId, token);
+            @AuthenticationPrincipal UserDetails userDetails) {
+        userService.approveBusinessProfile(profileId, userDetails.getUsername());
         return ResponseEntity.ok(Map.of("message", "승인되었습니다."));
     }
 

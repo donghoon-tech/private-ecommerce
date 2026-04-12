@@ -7,7 +7,8 @@ import com.example.ecommerce.mapper.UserMapper;
 import com.example.ecommerce.repository.BusinessProfileRepository;
 import com.example.ecommerce.repository.RoleRepository;
 import com.example.ecommerce.repository.UserRepository;
-import com.example.ecommerce.security.JwtTokenProvider;
+import com.example.ecommerce.entity.BusinessProfile;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,8 +38,6 @@ class UserServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private UserMapper userMapper;
-    @Mock
-    private JwtTokenProvider jwtTokenProvider;
 
     @InjectMocks
     private UserService userService;
@@ -62,5 +61,34 @@ class UserServiceTest {
         // Then
         assertThat(result.getRole()).isEqualTo("ADMIN");
         assertThat(user.getRole().getName()).isEqualTo("ADMIN");
+    }
+
+    @Test
+    @DisplayName("사업자 프로필 승인 시 프로필 상태가 approved로 변경되고 사용자 권한이 USER로 격상된다")
+    void approveBusinessProfile_success() {
+        // Given
+        UUID profileId = UUID.randomUUID();
+        String adminUsername = "adminUser";
+        
+        User admin = User.builder().username(adminUsername).build();
+        User seller = User.builder().username("seller").build();
+        BusinessProfile profile = BusinessProfile.builder()
+                .id(profileId)
+                .user(seller)
+                .status(BusinessProfile.Status.pending)
+                .build();
+        Role userRole = Role.builder().name("USER").build();
+
+        given(businessProfileRepository.findById(profileId)).willReturn(Optional.of(profile));
+        given(userRepository.findByUsername(adminUsername)).willReturn(Optional.of(admin));
+        given(roleRepository.findByName("USER")).willReturn(Optional.of(userRole));
+
+        // When
+        userService.approveBusinessProfile(profileId, adminUsername);
+
+        // Then
+        assertThat(profile.getStatus()).isEqualTo(BusinessProfile.Status.approved);
+        assertThat(profile.getApprovedBy()).isEqualTo(admin);
+        assertThat(seller.getRole().getName()).isEqualTo("USER");
     }
 }

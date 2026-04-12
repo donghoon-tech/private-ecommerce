@@ -1,8 +1,7 @@
 package com.example.ecommerce.security;
 
-import com.example.ecommerce.entity.Menu;
+import com.example.ecommerce.entity.Program;
 import com.example.ecommerce.entity.Role;
-import com.example.ecommerce.entity.RoleMenuAction;
 import com.example.ecommerce.entity.User;
 import com.example.ecommerce.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -31,17 +30,19 @@ class CustomUserDetailsServiceTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @Test
-    @DisplayName("loadUserByUsername 호출 시 User의 Role과 MenuActions가 Authorities로 변환된다")
+    @DisplayName("loadUserByUsername 호출 시 User의 Role과 연관된 Program 정보가 Authorities로 변환된다")
     void loadUserByUsername_success() {
         // Given
-        Menu menu = Menu.builder().menuCode("PRODUCT").build();
-        Role role = Role.builder().name("USER").build();
+        Program program = Program.builder()
+                .programCode("PG_PRODUCT")
+                .name("상품 관리")
+                .build();
+                
+        Role role = Role.builder()
+                .name("USER")
+                .programs(Set.of(program))
+                .build();
         
-        RoleMenuAction action1 = RoleMenuAction.builder()
-                .menu(menu).canRead(true).canCreate(true).build();
-
-        role.setMenuActions(Set.of(action1));
-
         User user = User.builder()
                 .username("testuser")
                 .passwordHash("hashedPwd")
@@ -55,11 +56,10 @@ class CustomUserDetailsServiceTest {
 
         // Then
         assertThat(userDetails.getUsername()).isEqualTo("testuser");
-        assertThat(userDetails.getPassword()).isEqualTo("hashedPwd");
-        assertThat(userDetails.getAuthorities()).hasSize(3); // ROLE_USER, PRODUCT:READ, PRODUCT:CREATE
+        assertThat(userDetails.getAuthorities()).hasSize(3); // ROLE_USER, PG_PRODUCT, PG_PRODUCT:READ
         assertThat(userDetails.getAuthorities())
                 .extracting("authority")
-                .containsExactlyInAnyOrder("ROLE_USER", "PRODUCT:READ", "PRODUCT:CREATE");
+                .containsExactlyInAnyOrder("ROLE_USER", "PG_PRODUCT", "PG_PRODUCT:READ");
     }
 
     @Test

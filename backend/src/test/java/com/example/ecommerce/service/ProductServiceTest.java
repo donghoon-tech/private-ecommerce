@@ -70,7 +70,7 @@ class ProductServiceTest {
         ProductDTO expectedDTO = ProductDTO.builder().id(productId).itemName("Test Product").sellerName("Best Seller")
                 .build();
 
-        given(productRepository.findAll()).willReturn(List.of(product));
+        given(productRepository.searchProducts(null, null, null)).willReturn(List.of(product));
         given(productImageRepository.findByProductIdIn(anyList())).willReturn(List.of(image));
         given(businessProfileRepository.findByUserIdIn(anyList())).willReturn(List.of(profile));
         given(productMapper.toDTO(any(Product.class), anyString(), anyList())).willReturn(expectedDTO);
@@ -82,7 +82,7 @@ class ProductServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getSellerName()).isEqualTo("Best Seller");
 
-        then(productRepository).should(times(1)).findAll();
+        then(productRepository).should(times(1)).searchProducts(null, null, null);
         then(productImageRepository).should(times(1)).findByProductIdIn(anyList());
         then(businessProfileRepository).should(times(1)).findByUserIdIn(anyList());
     }
@@ -98,7 +98,7 @@ class ProductServiceTest {
         Product product = Product.builder().id(productId).seller(seller).itemName("Detail Product").build();
         ProductDTO expectedDTO = ProductDTO.builder().id(productId).itemName("Detail Product").build();
 
-        given(productRepository.findById(productId)).willReturn(Optional.of(product));
+        given(productRepository.findWithDetailsById(productId)).willReturn(Optional.of(product));
         // toProductDTOs 내부 로직 Mocking (단건 조회지만 내부적으로 Bulk 메서드 재사용 중)
         given(productImageRepository.findByProductIdIn(anyList())).willReturn(Collections.emptyList());
         given(businessProfileRepository.findByUserIdIn(anyList())).willReturn(Collections.emptyList());
@@ -117,7 +117,7 @@ class ProductServiceTest {
     void getProductById_notFound() {
         // Given
         UUID invalidId = UUID.randomUUID();
-        given(productRepository.findById(invalidId)).willReturn(Optional.empty());
+        given(productRepository.findWithDetailsById(invalidId)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> productService.getProductById(invalidId))

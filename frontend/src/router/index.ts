@@ -90,6 +90,12 @@ const router = createRouter({
             name: 'admin-roles',
             component: () => import('../views/admin/AdminRoleManagementView.vue'),
             meta: { requiresAuth: true, permission: 'PG_SYS_AUTH' }
+        },
+        {
+            path: '/admin/programs',
+            name: 'admin-programs',
+            component: () => import('../views/admin/AdminProgramManagementView.vue'),
+            meta: { requiresAuth: true, permission: 'PG_SYS_AUTH' }
         }
     ]
 })

@@ -119,7 +119,7 @@ public class AuthService {
                 .representativeName(request.getCompanyName()) // 대표자명 필드 부재로 상호명 사용
                 .officeAddress(request.getBusinessAddress())
                 .storageAddress(request.getYardAddress())
-                .status(BusinessProfile.Status.pending)
+                .status(BusinessProfile.Status.PENDING)
                 .isMain(true) // 첫 가입 시 주 사업자로 설정
                 .build();
 

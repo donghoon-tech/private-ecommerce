@@ -42,17 +42,17 @@ public class Notification {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private Status status = Status.pending;
+    private Status status = Status.PENDING;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum Channel {
-        sms, email
+        SMS, EMAIL
     }
 
     public enum Status {
-        pending, sent, failed
+        PENDING, SENT, FAILED
     }
 }

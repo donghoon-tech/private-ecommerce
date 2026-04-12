@@ -31,6 +31,6 @@ public class UserDTO {
     private String companyName; // business_profiles.business_name
     private String officeAddress;
     private String storageAddress;
-    private String businessStatus; // business_profiles.status (pending/approved/rejected)
+    private String businessStatus; // business_profiles.status (PENDING/APPROVED/REJECTED)
     private String rejectionReason;
 }

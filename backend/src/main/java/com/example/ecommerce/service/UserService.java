@@ -140,7 +140,7 @@ public class UserService {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.PROFILE_NOT_FOUND));
 
-        if (profile.getStatus() != BusinessProfile.Status.pending) {
+        if (profile.getStatus() != BusinessProfile.Status.PENDING) {
             throw new BusinessException(ErrorMessage.ONLY_PENDING_APPROVABLE);
         }
 
@@ -148,7 +148,7 @@ public class UserService {
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.ADMIN_NOT_FOUND));
 
         // 1. 프로필 상태 변경
-        profile.setStatus(BusinessProfile.Status.approved);
+        profile.setStatus(BusinessProfile.Status.APPROVED);
         profile.setApprovedAt(LocalDateTime.now());
         profile.setApprovedBy(admin);
         profile.setRejectionReason(null);
@@ -168,11 +168,11 @@ public class UserService {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.PROFILE_NOT_FOUND));
 
-        if (profile.getStatus() != BusinessProfile.Status.pending) {
+        if (profile.getStatus() != BusinessProfile.Status.PENDING) {
             throw new BusinessException(ErrorMessage.ONLY_PENDING_REJECTABLE);
         }
 
-        profile.setStatus(BusinessProfile.Status.rejected);
+        profile.setStatus(BusinessProfile.Status.REJECTED);
         profile.setRejectionReason(reason);
         profile.setUpdatedAt(LocalDateTime.now());
     }

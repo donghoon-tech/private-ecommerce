@@ -19,10 +19,10 @@
           전체 사용자
         </button>
         <button 
-          @click="activeTab = 'pending'" 
+          @click="activeTab = 'PENDING'" 
           :class="[
             'py-4 px-1 border-b-2 font-medium text-sm',
-            activeTab === 'pending' 
+            activeTab === 'PENDING' 
               ? 'border-indigo-500 text-indigo-600' 
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           ]"
@@ -68,9 +68,9 @@
               <span 
                 :class="[
                   'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
-                  user.businessStatus === 'approved' ? 'bg-green-100 text-green-800' :
-                  user.businessStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  user.businessStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                  user.businessStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                  user.businessStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                  user.businessStatus === 'REJECTED' ? 'bg-red-100 text-red-800' :
                   'bg-gray-100 text-gray-800'
                 ]"
               >
@@ -82,7 +82,7 @@
       </table>
       
       <div v-if="filteredUsers.length === 0" class="text-center py-12">
-        <p class="text-gray-500">{{ activeTab === 'pending' ? '대기 중인 사용자가 없습니다.' : '사용자가 없습니다.' }}</p>
+        <p class="text-gray-500">{{ activeTab === 'PENDING' ? '대기 중인 사용자가 없습니다.' : '사용자가 없습니다.' }}</p>
       </div>
 
       <!-- Pagination -->
@@ -144,12 +144,12 @@ interface User {
   companyName?: string
   officeAddress?: string
   storageAddress?: string
-  businessStatus?: 'pending' | 'approved' | 'rejected'
+  businessStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'
   profileId?: string
   rejectionReason?: string
 }
 
-const activeTab = ref<'all' | 'pending'>('all')
+const activeTab = ref<'all' | 'PENDING'>('all')
 const users = ref<User[]>([])
 const loading = ref(false)
 
@@ -158,8 +158,8 @@ const currentPage = ref(1)
 const pageSize = 10
 
 const filteredUsers = computed(() => {
-  if (activeTab.value === 'pending') {
-    return users.value.filter(u => u.businessStatus === 'pending')
+  if (activeTab.value === 'PENDING') {
+    return users.value.filter(u => u.businessStatus === 'PENDING')
   }
   return users.value
 })
@@ -189,14 +189,14 @@ const displayPages = computed(() => {
 })
 
 const pendingCount = computed(() => {
-  return users.value.filter(u => u.businessStatus === 'pending').length
+  return users.value.filter(u => u.businessStatus === 'PENDING').length
 })
 
 const getStatusText = (status?: string) => {
   switch (status) {
-    case 'approved': return '승인됨'
-    case 'pending': return '대기중'
-    case 'rejected': return '반려됨'
+    case 'APPROVED': return '승인됨'
+    case 'PENDING': return '대기중'
+    case 'REJECTED': return '반려됨'
     default: return '미등록'
   }
 }

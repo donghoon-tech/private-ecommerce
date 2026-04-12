@@ -38,6 +38,6 @@ public class OrderImage {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum ImageType {
-        loading, delivery
+        LOADING, DELIVERY
     }
 }

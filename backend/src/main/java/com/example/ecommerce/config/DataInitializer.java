@@ -162,7 +162,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .representativeName("김판매")
                                         .officeAddress("서울시 강남구")
                                         .storageAddress("경기도 하남시 천현동")
-                                        .status(BusinessProfile.Status.approved)
+                                        .status(BusinessProfile.Status.APPROVED)
                                         .isMain(true)
                                         .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin) // approvedBy는 생략하거나 조회해서 넣어야 함
@@ -192,7 +192,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .representativeName("이형제")
                                         .officeAddress("경기도 성남시")
                                         .storageAddress("경기도 광주시")
-                                        .status(BusinessProfile.Status.approved)
+                                        .status(BusinessProfile.Status.APPROVED)
                                         .isMain(true)
                                         .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin)
@@ -222,7 +222,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .representativeName("박서울")
                                         .officeAddress("서울시 송파구")
                                         .storageAddress("경기도 남양주시")
-                                        .status(BusinessProfile.Status.approved)
+                                        .status(BusinessProfile.Status.APPROVED)
                                         .isMain(true)
                                         .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin)
@@ -251,7 +251,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .businessNumber("444-44-44444")
                                         .representativeName("최구매")
                                         .officeAddress("부산시 해운대구")
-                                        .status(BusinessProfile.Status.approved) // 승인 완료 가정
+                                        .status(BusinessProfile.Status.APPROVED) // 승인 완료 가정
                                         .isMain(true)
                                         .approvedAt(LocalDateTime.now())
                                         .approvedBy(admin) // admin is defined above
@@ -279,7 +279,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .representativeName("정대기")
                                         .officeAddress("인천시 남동구")
                                         .storageAddress("인천시 서구")
-                                        .status(BusinessProfile.Status.pending) // 대기 중
+                                        .status(BusinessProfile.Status.PENDING) // 대기 중
                                         .isMain(true)
                                         .build();
                         businessProfileRepository.save(pendingProfile);
@@ -319,7 +319,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .saleUnit("개")
                                         .stockQuantity(100 + i * 10)
                                         .totalAmount(new BigDecimal((i + 1) * 1000 * 100)) // 단순 계산
-                                        .status(Product.Status.selling)
+                                        .status(Product.Status.SELLING)
                                         .approvedAt(LocalDateTime.now())
                                         .isDisplayed(true)
                                         .build();

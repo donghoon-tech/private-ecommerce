@@ -17,7 +17,7 @@ interface User {
   companyName?: string
   officeAddress?: string
   storageAddress?: string
-  businessStatus?: 'pending' | 'approved' | 'rejected'
+  businessStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'
   profileId?: string
   rejectionReason?: string
 }
@@ -227,20 +227,20 @@ onMounted(() => {
                 <span 
                   :class="[
                     'px-3 py-2 inline-flex text-sm font-semibold rounded-md',
-                    user.businessStatus === 'approved' ? 'bg-green-100 text-green-800' :
-                    user.businessStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    user.businessStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                    user.businessStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                    user.businessStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                    user.businessStatus === 'REJECTED' ? 'bg-red-100 text-red-800' :
                     'bg-gray-100 text-gray-800'
                   ]"
                 >
-                  {{ user.businessStatus === 'approved' ? '승인됨' : 
-                     user.businessStatus === 'pending' ? '대기중' : 
-                     user.businessStatus === 'rejected' ? '반려됨' : '미등록' }}
+                  {{ user.businessStatus === 'APPROVED' ? '승인됨' : 
+                     user.businessStatus === 'PENDING' ? '대기중' : 
+                     user.businessStatus === 'REJECTED' ? '반려됨' : '미등록' }}
                 </span>
               </div>
             </div>
 
-            <div v-if="user.businessStatus === 'rejected' && user.rejectionReason" class="mt-2 p-3 bg-red-50 border border-red-200 rounded">
+            <div v-if="user.businessStatus === 'REJECTED' && user.rejectionReason" class="mt-2 p-3 bg-red-50 border border-red-200 rounded">
               <span class="text-gray-700 font-medium">반려 사유:</span>
               <p class="mt-1 text-sm text-red-700">{{ user.rejectionReason }}</p>
             </div>
@@ -266,7 +266,7 @@ onMounted(() => {
           </div>
 
           <!-- 액션 버튼 -->
-          <div v-if="user.businessStatus === 'pending'" class="flex gap-3">
+          <div v-if="user.businessStatus === 'PENDING'" class="flex gap-3">
             <button 
               @click="handleApprove"
               class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none"

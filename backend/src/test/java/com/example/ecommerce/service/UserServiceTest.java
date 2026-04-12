@@ -77,7 +77,7 @@ class UserServiceTest {
         BusinessProfile profile = BusinessProfile.builder()
                 .id(profileId)
                 .user(seller)
-                .status(BusinessProfile.Status.pending)
+                .status(BusinessProfile.Status.PENDING)
                 .build();
         Role userRole = Role.builder().name("USER").build();
 
@@ -89,7 +89,7 @@ class UserServiceTest {
         userService.approveBusinessProfile(profileId, adminUsername);
 
         // Then
-        assertThat(profile.getStatus()).isEqualTo(BusinessProfile.Status.approved);
+        assertThat(profile.getStatus()).isEqualTo(BusinessProfile.Status.APPROVED);
         assertThat(profile.getApprovedBy()).isEqualTo(admin);
         assertThat(seller.getRole().getName()).isEqualTo("USER");
     }
@@ -101,7 +101,7 @@ class UserServiceTest {
         UUID profileId = UUID.randomUUID();
         BusinessProfile profile = BusinessProfile.builder()
                 .id(profileId)
-                .status(BusinessProfile.Status.approved) // 이미 승인됨
+                .status(BusinessProfile.Status.APPROVED) // 이미 승인됨
                 .build();
 
         given(businessProfileRepository.findById(profileId)).willReturn(Optional.of(profile));

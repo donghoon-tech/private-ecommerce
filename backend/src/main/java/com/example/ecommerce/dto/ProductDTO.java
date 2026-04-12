@@ -33,7 +33,7 @@ public class ProductDTO {
     private String loadingAddress;
     private String loadingAddressDisplay; // 시/구 단위
 
-    private String status; // pending, selling, etc
+    private String status; // PENDING, SELLING, etc
     private String rejectionReason;
 
     private List<String> imageUrls; // 별도 테이블 조회 후 매핑

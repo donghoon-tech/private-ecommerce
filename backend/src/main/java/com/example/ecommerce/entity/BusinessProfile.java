@@ -43,7 +43,7 @@ public class BusinessProfile {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private Status status = Status.pending;
+    private Status status = Status.PENDING;
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
@@ -71,6 +71,6 @@ public class BusinessProfile {
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     public enum Status {
-        pending, approved, rejected
+        PENDING, APPROVED, REJECTED
     }
 }

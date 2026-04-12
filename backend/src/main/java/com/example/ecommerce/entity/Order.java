@@ -56,12 +56,12 @@ public class Order {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private Status status = Status.pending;
+    private Status status = Status.PENDING;
 
     @Column(name = "payment_status", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private PaymentStatus paymentStatus = PaymentStatus.pending;
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     @Column(name = "order_memo", columnDefinition = "TEXT")
     private String orderMemo;
@@ -87,18 +87,18 @@ public class Order {
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     public enum OrderType {
-        platform, phone
+        PLATFORM, PHONE
     }
 
     public enum TruckType {
-        cargo, wingbody
+        CARGO, WINGBODY
     }
 
     public enum Status {
-        pending, shipping, delivered, completed
+        PENDING, SHIPPING, DELIVERED, COMPLETED
     }
 
     public enum PaymentStatus {
-        pending, confirmed, settled
+        PENDING, CONFIRMED, SETTLED
     }
 }

@@ -114,7 +114,7 @@ public class DataInitializer implements CommandLineRunner {
                 userRepository.findByUsername("dev").ifPresentOrElse(u -> {}, () -> {
                         User developer = User.builder()
                                         .username("dev")
-                                        .passwordHash(passwordEncoder.encode("dev1234"))
+                                        .passwordHash(passwordEncoder.encode("1234"))
                                         .name("개발자")
                                         .representativePhone("01099999999")
                                         .role(roleRepository.findByName("DEVELOPER")
@@ -130,7 +130,7 @@ public class DataInitializer implements CommandLineRunner {
                 User admin = userRepository.findByUsername("admin").orElseGet(() -> {
                         User newAdmin = User.builder()
                                         .username("admin")
-                                        .passwordHash(passwordEncoder.encode("admin1234"))
+                                        .passwordHash(passwordEncoder.encode("1234"))
                                         .name("관리자")
                                         .representativePhone("01000000000")
                                         .role(roleRepository.findByName("ADMIN")
@@ -144,7 +144,7 @@ public class DataInitializer implements CommandLineRunner {
                 User seller1 = userRepository.findByUsername("seller").orElseGet(() -> {
                         User newSeller = User.builder()
                                         .username("seller")
-                                        .passwordHash(passwordEncoder.encode("seller1234"))
+                                        .passwordHash(passwordEncoder.encode("1234"))
                                         .name("김판매")
                                         .representativePhone("01011111111")
                                         .email("seller@example.com")
@@ -176,7 +176,7 @@ public class DataInitializer implements CommandLineRunner {
                 User seller2 = userRepository.findByUsername("seller2").orElseGet(() -> {
                         User newSeller = User.builder()
                                         .username("seller2")
-                                        .passwordHash(passwordEncoder.encode("seller1234"))
+                                        .passwordHash(passwordEncoder.encode("1234"))
                                         .name("이형제")
                                         .representativePhone("01012345678")
                                         .email("seller2@example.com")
@@ -206,7 +206,7 @@ public class DataInitializer implements CommandLineRunner {
                 User seller3 = userRepository.findByUsername("seller3").orElseGet(() -> {
                         User newSeller = User.builder()
                                         .username("seller3")
-                                        .passwordHash(passwordEncoder.encode("seller1234"))
+                                        .passwordHash(passwordEncoder.encode("1234"))
                                         .name("박서울")
                                         .representativePhone("01087654321")
                                         .email("seller3@example.com")
@@ -236,7 +236,7 @@ public class DataInitializer implements CommandLineRunner {
                 userRepository.findByUsername("buyer").ifPresentOrElse(u -> {}, () -> {
                         User buyer = User.builder()
                                         .username("buyer")
-                                        .passwordHash(passwordEncoder.encode("buyer1234"))
+                                        .passwordHash(passwordEncoder.encode("1234"))
                                         .name("최구매")
                                         .representativePhone("01022222222")
                                         .email("buyer@example.com")
@@ -263,7 +263,7 @@ public class DataInitializer implements CommandLineRunner {
                 userRepository.findByUsername("pending_user").ifPresentOrElse(u -> {}, () -> {
                         User pendingUser = User.builder()
                                         .username("pending_user")
-                                        .passwordHash(passwordEncoder.encode("user1234"))
+                                        .passwordHash(passwordEncoder.encode("1234"))
                                         .name("정대기")
                                         .representativePhone("01033333333")
                                         .email("pending@example.com")

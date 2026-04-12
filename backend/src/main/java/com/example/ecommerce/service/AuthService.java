@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.ecommerce.util.ValidationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,9 @@ public class AuthService {
     private final UserMapper userMapper;
 
     public UserDTO register(RegisterRequest request) {
+        // 비밀번호 복잡성 검증
+        ValidationUtils.validatePassword(request.getPassword());
+
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new DuplicateException("이미 존재하는 아이디입니다.");
         }

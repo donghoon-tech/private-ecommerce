@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.ecommerce.util.ValidationUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -65,6 +66,7 @@ public class UserService {
 
         // 유저 기본 정보 수정
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            ValidationUtils.validatePassword(request.getPassword());
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
         if (request.getName() != null)

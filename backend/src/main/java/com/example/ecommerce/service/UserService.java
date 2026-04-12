@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.ecommerce.util.ValidationUtils;
+import com.example.ecommerce.constant.AppConstants;
+import com.example.ecommerce.constant.ErrorMessage;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,7 +38,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDTO getMyInfo(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.USER_NOT_FOUND));
 
         // 메인 사업자 프로필 조회 (없을 수도 있음 - 가입 초기 등)
         BusinessProfile mainProfile = businessProfileRepository.findByUserId(user.getId()).stream()
@@ -50,7 +52,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDTO getUserDetail(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.USER_NOT_FOUND));
 
         BusinessProfile mainProfile = businessProfileRepository.findByUserId(user.getId()).stream()
                 .filter(BusinessProfile::isMain)
@@ -62,7 +64,7 @@ public class UserService {
 
     public UserDTO updateMyInfo(String username, UserUpdateRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.USER_NOT_FOUND));
 
         // 유저 기본 정보 수정
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
@@ -116,10 +118,10 @@ public class UserService {
      */
     public UserDTO updateUserRole(UUID userId, String roleStr) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.USER_NOT_FOUND));
 
         Role newRole = roleRepository.findByName(roleStr.toUpperCase())
-                .orElseThrow(() -> new NotFoundException("존재하지 않는 권한입니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.ROLE_NOT_FOUND));
         user.setRole(newRole);
         user.setUpdatedAt(LocalDateTime.now());
 
@@ -136,14 +138,14 @@ public class UserService {
      */
     public void approveBusinessProfile(UUID profileId, String adminUsername) {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
-                .orElseThrow(() -> new NotFoundException("프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.PROFILE_NOT_FOUND));
 
         if (profile.getStatus() != BusinessProfile.Status.pending) {
-            throw new BusinessException("대기 상태인 프로필만 승인할 수 있습니다.");
+            throw new BusinessException(ErrorMessage.ONLY_PENDING_APPROVABLE);
         }
 
         User admin = userRepository.findByUsername(adminUsername)
-                .orElseThrow(() -> new NotFoundException("관리자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.ADMIN_NOT_FOUND));
 
         // 1. 프로필 상태 변경
         profile.setStatus(BusinessProfile.Status.approved);
@@ -154,7 +156,7 @@ public class UserService {
 
         // 2. 사용자 역할 변경 (UNVERIFIED -> USER)
         User user = profile.getUser();
-        Role userRole = roleRepository.findByName("USER")
+        Role userRole = roleRepository.findByName(AppConstants.ROLE_USER)
                 .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "USER 역할을 찾을 수 없습니다."));
         user.setRole(userRole);
     }
@@ -164,10 +166,10 @@ public class UserService {
      */
     public void rejectBusinessProfile(UUID profileId, String reason) {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
-                .orElseThrow(() -> new NotFoundException("프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.PROFILE_NOT_FOUND));
 
         if (profile.getStatus() != BusinessProfile.Status.pending) {
-            throw new BusinessException("대기 상태인 프로필만 반려할 수 있습니다.");
+            throw new BusinessException(ErrorMessage.ONLY_PENDING_REJECTABLE);
         }
 
         profile.setStatus(BusinessProfile.Status.rejected);

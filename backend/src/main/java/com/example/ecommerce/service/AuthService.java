@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.ecommerce.util.ValidationUtils;
+import com.example.ecommerce.constant.AppConstants;
+import com.example.ecommerce.constant.ErrorMessage;
 import com.example.ecommerce.dto.request.LoginRequest;
 import com.example.ecommerce.dto.response.LoginResponse;
 import com.example.ecommerce.security.JwtTokenProvider;
@@ -49,15 +51,15 @@ public class AuthService {
         // ROLE_ 로 시작하는 권한(역할) 찾기
         String role = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .filter(auth -> auth.startsWith("ROLE_"))
+                .filter(auth -> auth.startsWith(AppConstants.ROLE_PREFIX))
                 .findFirst()
-                .map(auth -> auth.replace("ROLE_", ""))
-                .orElse("USER");
+                .map(auth -> auth.replace(AppConstants.ROLE_PREFIX, ""))
+                .orElse(AppConstants.ROLE_USER);
 
         // 역할(Role)을 제외한 나머지 모든 실제 액션 퍼미션 수집
         List<String> permissions = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .filter(auth -> !auth.startsWith("ROLE_"))
+                .filter(auth -> !auth.startsWith(AppConstants.ROLE_PREFIX))
                 .collect(Collectors.toList());
 
         String token = jwtTokenProvider.createToken(username, role);
@@ -75,11 +77,11 @@ public class AuthService {
         ValidationUtils.validatePassword(request.getPassword());
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateException("이미 존재하는 아이디입니다.");
+            throw new DuplicateException(ErrorMessage.ID_ALREADY_EXISTS);
         }
         String normalizedPhone = normalizePhone(request.getPhone());
         if (userRepository.existsByRepresentativePhone(normalizedPhone)) {
-            throw new DuplicateException("이미 가입된 전화번호입니다.");
+            throw new DuplicateException(ErrorMessage.PHONE_ALREADY_EXISTS);
         }
 
         // 1. 사용자 계정 생성
@@ -90,7 +92,7 @@ public class AuthService {
                                                 // name이 없었음.
                 .representativePhone(normalizedPhone)
                 .email(request.getEmail())
-                .role(roleRepository.findByName("UNVERIFIED")
+                .role(roleRepository.findByName(AppConstants.ROLE_UNVERIFIED)
                         .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "기본 권한을 찾을 수 없습니다.")))
                 .businessNumber(request.getBusinessNumber())
                 .isActive(true)
@@ -130,7 +132,7 @@ public class AuthService {
     public String findId(String phone) {
         return userRepository.findByRepresentativePhone(normalizePhone(phone))
                 .map(User::getUsername)
-                .orElseThrow(() -> new NotFoundException("해당 번호로 가입된 아이디가 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
     }
 
     public boolean checkPhoneExists(String phone) {
@@ -158,7 +160,7 @@ public class AuthService {
                     String cleanUserPhone = normalizePhone(u.getRepresentativePhone());
                     return cleanUserPhone.equals(cleanInputPhone);
                 })
-                .orElseThrow(() -> new NotFoundException("일치하는 회원 정보가 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
 
         String tempPassword = generateRandomPassword();
         user.setPasswordHash(passwordEncoder.encode(tempPassword));

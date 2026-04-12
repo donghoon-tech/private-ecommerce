@@ -1,6 +1,7 @@
 package com.example.ecommerce.config;
 import lombok.extern.slf4j.Slf4j;
 
+import com.example.ecommerce.constant.ErrorMessage;
 import com.example.ecommerce.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleException(Exception e) {
         log.error("Internal server error: {}", e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("message", "서버 내부 오류가 발생했습니다."));
+                .body(Map.of("message", ErrorMessage.INTERNAL_SERVER_ERROR));
     }
 }

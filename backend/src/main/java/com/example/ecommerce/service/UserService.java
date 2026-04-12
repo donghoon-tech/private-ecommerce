@@ -138,6 +138,10 @@ public class UserService {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
                 .orElseThrow(() -> new NotFoundException("프로필을 찾을 수 없습니다."));
 
+        if (profile.getStatus() != BusinessProfile.Status.pending) {
+            throw new BusinessException("대기 상태인 프로필만 승인할 수 있습니다.");
+        }
+
         User admin = userRepository.findByUsername(adminUsername)
                 .orElseThrow(() -> new NotFoundException("관리자를 찾을 수 없습니다."));
 
@@ -161,6 +165,10 @@ public class UserService {
     public void rejectBusinessProfile(UUID profileId, String reason) {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
                 .orElseThrow(() -> new NotFoundException("프로필을 찾을 수 없습니다."));
+
+        if (profile.getStatus() != BusinessProfile.Status.pending) {
+            throw new BusinessException("대기 상태인 프로필만 반려할 수 있습니다.");
+        }
 
         profile.setStatus(BusinessProfile.Status.rejected);
         profile.setRejectionReason(reason);

@@ -1,6 +1,7 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.dto.UserDTO;
+import com.example.ecommerce.exception.BusinessException;
 import com.example.ecommerce.entity.Role;
 import com.example.ecommerce.entity.User;
 import com.example.ecommerce.mapper.UserMapper;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -90,5 +92,23 @@ class UserServiceTest {
         assertThat(profile.getStatus()).isEqualTo(BusinessProfile.Status.approved);
         assertThat(profile.getApprovedBy()).isEqualTo(admin);
         assertThat(seller.getRole().getName()).isEqualTo("USER");
+    }
+
+    @Test
+    @DisplayName("이미 승인된 프로필을 다시 승인하려 하면 예외가 발생한다")
+    void approveBusinessProfile_alreadyProcessed_fail() {
+        // Given
+        UUID profileId = UUID.randomUUID();
+        BusinessProfile profile = BusinessProfile.builder()
+                .id(profileId)
+                .status(BusinessProfile.Status.approved) // 이미 승인됨
+                .build();
+
+        given(businessProfileRepository.findById(profileId)).willReturn(Optional.of(profile));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.approveBusinessProfile(profileId, "admin"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("대기 상태인 프로필만 승인할 수 있습니다.");
     }
 }

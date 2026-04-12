@@ -59,6 +59,9 @@ public class BusinessProfile {
     @Builder.Default
     private boolean isMain = false;
 
+    @Version
+    private Long version;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

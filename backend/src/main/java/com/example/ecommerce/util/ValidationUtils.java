@@ -1,5 +1,6 @@
 package com.example.ecommerce.util;
 
+import com.example.ecommerce.constant.ErrorMessage;
 import com.example.ecommerce.exception.BusinessException;
 
 public class ValidationUtils {
@@ -7,7 +8,14 @@ public class ValidationUtils {
 
     public static void validatePassword(String password) {
         if (password == null || !password.matches(PASSWORD_PATTERN)) {
-            throw new BusinessException("비밀번호는 영문과 숫자를 포함하여 최소 8자 이상이어야 합니다.");
+            throw new BusinessException(ErrorMessage.PASSWORD_INVALID);
         }
+    }
+
+    public static String normalizePhone(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        return phone.replaceAll("[^0-9]", "");
     }
 }

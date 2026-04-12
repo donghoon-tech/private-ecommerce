@@ -4,6 +4,8 @@ import com.example.ecommerce.exception.BusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.example.ecommerce.constant.ErrorMessage;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -24,7 +26,7 @@ class ValidationUtilsTest {
     void validatePassword_noLetter_fail() {
         assertThatThrownBy(() -> ValidationUtils.validatePassword("12345678"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("비밀번호는 영문과 숫자를 포함하여 최소 8자 이상이어야 합니다.");
+                .hasMessage(ErrorMessage.PASSWORD_INVALID);
     }
 
     @Test
@@ -32,7 +34,7 @@ class ValidationUtilsTest {
     void validatePassword_noDigit_fail() {
         assertThatThrownBy(() -> ValidationUtils.validatePassword("password@"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("비밀번호는 영문과 숫자를 포함하여 최소 8자 이상이어야 합니다.");
+                .hasMessage(ErrorMessage.PASSWORD_INVALID);
     }
 
     @Test
@@ -40,6 +42,14 @@ class ValidationUtilsTest {
     void validatePassword_tooShort_fail() {
         assertThatThrownBy(() -> ValidationUtils.validatePassword("p12345"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("비밀번호는 영문과 숫자를 포함하여 최소 8자 이상이어야 합니다.");
+                .hasMessage(ErrorMessage.PASSWORD_INVALID);
+    }
+
+    @Test
+    @DisplayName("전화번호에서 숫자를 제외한 문자를 제거한다")
+    void normalizePhone_success() {
+        assertThat(ValidationUtils.normalizePhone("010-1234-5678")).isEqualTo("01012345678");
+        assertThat(ValidationUtils.normalizePhone("02) 123-4567")).isEqualTo("021234567");
+        assertThat(ValidationUtils.normalizePhone(null)).isNull();
     }
 }

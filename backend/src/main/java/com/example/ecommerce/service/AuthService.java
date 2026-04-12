@@ -79,7 +79,7 @@ public class AuthService {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new DuplicateException(ErrorMessage.ID_ALREADY_EXISTS);
         }
-        String normalizedPhone = normalizePhone(request.getPhone());
+        String normalizedPhone = ValidationUtils.normalizePhone(request.getPhone());
         if (userRepository.existsByRepresentativePhone(normalizedPhone)) {
             throw new DuplicateException(ErrorMessage.PHONE_ALREADY_EXISTS);
         }
@@ -130,13 +130,13 @@ public class AuthService {
     }
 
     public String findId(String phone) {
-        return userRepository.findByRepresentativePhone(normalizePhone(phone))
+        return userRepository.findByRepresentativePhone(ValidationUtils.normalizePhone(phone))
                 .map(User::getUsername)
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
     }
 
     public boolean checkPhoneExists(String phone) {
-        return userRepository.existsByRepresentativePhone(normalizePhone(phone));
+        return userRepository.existsByRepresentativePhone(ValidationUtils.normalizePhone(phone));
     }
 
     public boolean checkUsernameExists(String username) {
@@ -144,20 +144,20 @@ public class AuthService {
     }
 
     public boolean checkUserAndPhoneExists(String username, String phone) {
-        String cleanInputPhone = normalizePhone(phone);
+        String cleanInputPhone = ValidationUtils.normalizePhone(phone);
         return userRepository.findByUsername(username)
                 .map(u -> {
-                    String cleanUserPhone = normalizePhone(u.getRepresentativePhone());
+                    String cleanUserPhone = ValidationUtils.normalizePhone(u.getRepresentativePhone());
                     return cleanUserPhone.equals(cleanInputPhone);
                 })
                 .orElse(false);
     }
 
     public String resetPassword(String username, String phone) {
-        String cleanInputPhone = normalizePhone(phone);
+        String cleanInputPhone = ValidationUtils.normalizePhone(phone);
         User user = userRepository.findByUsername(username)
                 .filter(u -> {
-                    String cleanUserPhone = normalizePhone(u.getRepresentativePhone());
+                    String cleanUserPhone = ValidationUtils.normalizePhone(u.getRepresentativePhone());
                     return cleanUserPhone.equals(cleanInputPhone);
                 })
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
@@ -176,11 +176,5 @@ public class AuthService {
             sb.append(chars.charAt(index));
         }
         return sb.toString();
-    }
-
-    private String normalizePhone(String phone) {
-        if (phone == null)
-            return null;
-        return phone.replaceAll("[^0-9]", "");
     }
 }

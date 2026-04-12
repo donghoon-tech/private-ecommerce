@@ -123,7 +123,6 @@ public class UserService {
         Role newRole = roleRepository.findByName(roleStr.toUpperCase())
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.ROLE_NOT_FOUND));
         user.setRole(newRole);
-        user.setUpdatedAt(LocalDateTime.now());
 
         BusinessProfile mainProfile = businessProfileRepository.findByUserId(user.getId()).stream()
                 .filter(BusinessProfile::isMain)
@@ -152,7 +151,6 @@ public class UserService {
         profile.setApprovedAt(LocalDateTime.now());
         profile.setApprovedBy(admin);
         profile.setRejectionReason(null);
-        profile.setUpdatedAt(LocalDateTime.now());
 
         // 2. 사용자 역할 변경 (UNVERIFIED -> USER)
         User user = profile.getUser();
@@ -174,6 +172,5 @@ public class UserService {
 
         profile.setStatus(BusinessProfile.Status.REJECTED);
         profile.setRejectionReason(reason);
-        profile.setUpdatedAt(LocalDateTime.now());
     }
 }

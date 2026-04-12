@@ -33,8 +33,6 @@ public class ProgramMapper {
                 .url(dto.getUrl())
                 .httpMethod(dto.getHttpMethod())
                 .type(dto.getType())
-                .createdAt(dto.getCreatedAt())
-                .updatedAt(dto.getUpdatedAt())
                 .build();
     }
 }

@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OrderImage {
+public class OrderImage extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -32,10 +32,6 @@ public class OrderImage {
     @Column(name = "image_type", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private ImageType imageType;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum ImageType {
         LOADING, DELIVERY

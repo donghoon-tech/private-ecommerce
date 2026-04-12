@@ -20,6 +20,7 @@ public class ProgramDTO {
     private String programCode;
     private String name;
     private String url;
+    private String httpMethod;
     private ProgramType type;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

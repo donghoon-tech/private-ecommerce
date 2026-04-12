@@ -1,10 +1,13 @@
 package com.example.ecommerce.service;
 
 
+import com.example.ecommerce.constant.ErrorMessage;
 import com.example.ecommerce.dto.ProgramDTO;
 import com.example.ecommerce.dto.RoleDTO;
 import com.example.ecommerce.entity.Program;
 import com.example.ecommerce.entity.Role;
+import com.example.ecommerce.mapper.ProgramMapper;
+import com.example.ecommerce.mapper.RoleMapper;
 import com.example.ecommerce.repository.ProgramRepository;
 import com.example.ecommerce.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,8 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final ProgramRepository programRepository;
+    private final RoleMapper roleMapper;
+    private final ProgramMapper programMapper;
 
     /**
      * 전체 Role 목록 조회 (각 Role에 바인딩된 Program 포함)
@@ -31,7 +36,7 @@ public class RoleService {
     @Transactional(readOnly = true)
     public List<RoleDTO> getAllRoles() {
         return roleRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(roleMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -41,8 +46,8 @@ public class RoleService {
     @Transactional(readOnly = true)
     public RoleDTO getRoleById(UUID roleId) {
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
-        return toDTO(role);
+                .orElseThrow(() -> new RuntimeException(ErrorMessage.ROLE_NOT_FOUND));
+        return roleMapper.toDTO(role);
     }
 
     /**
@@ -51,7 +56,7 @@ public class RoleService {
     @Transactional(readOnly = true)
     public List<ProgramDTO> getAllPrograms() {
         return programRepository.findAll().stream()
-                .map(this::toProgramDTO)
+                .map(programMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -72,7 +77,7 @@ public class RoleService {
         Set<Program> programs = resolvePrograms(programIds);
         role.setPrograms(programs);
 
-        return toDTO(roleRepository.save(role));
+        return roleMapper.toDTO(roleRepository.save(role));
     }
 
     /**
@@ -80,7 +85,7 @@ public class RoleService {
      */
     public RoleDTO updateRole(UUID roleId, String name, String description, List<UUID> programIds) {
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException(ErrorMessage.ROLE_NOT_FOUND));
 
         if (name != null && !name.isBlank()) {
             role.setName(name.toUpperCase());
@@ -93,7 +98,7 @@ public class RoleService {
             role.getPrograms().addAll(resolvePrograms(programIds));
         }
 
-        return toDTO(roleRepository.save(role));
+        return roleMapper.toDTO(roleRepository.save(role));
     }
 
     /**
@@ -101,12 +106,12 @@ public class RoleService {
      */
     public RoleDTO assignPrograms(UUID roleId, List<UUID> programIds) {
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException(ErrorMessage.ROLE_NOT_FOUND));
         
         Set<Program> newPrograms = resolvePrograms(programIds);
         role.getPrograms().addAll(newPrograms);
         
-        return toDTO(roleRepository.save(role));
+        return roleMapper.toDTO(roleRepository.save(role));
     }
 
     /**
@@ -114,12 +119,12 @@ public class RoleService {
      */
     public RoleDTO removePrograms(UUID roleId, List<UUID> programIds) {
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException(ErrorMessage.ROLE_NOT_FOUND));
                 
         Set<Program> programsToRemove = resolvePrograms(programIds);
         role.getPrograms().removeAll(programsToRemove);
         
-        return toDTO(roleRepository.save(role));
+        return roleMapper.toDTO(roleRepository.save(role));
     }
 
     /**
@@ -127,7 +132,7 @@ public class RoleService {
      */
     public void deleteRole(UUID roleId) {
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("해당 Role을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException(ErrorMessage.ROLE_NOT_FOUND));
 
         List<String> protectedRoles = List.of("UNVERIFIED", "USER", "ADMIN");
         if (protectedRoles.contains(role.getName())) {
@@ -142,37 +147,5 @@ public class RoleService {
             return new HashSet<>();
         }
         return new HashSet<>(programRepository.findAllById(programIds));
-    }
-
-    private RoleDTO toDTO(Role role) {
-        List<ProgramDTO> programDTOs = role.getPrograms().stream()
-                .map(this::toProgramDTO)
-                .collect(Collectors.toList());
-
-        List<String> permStrings = role.getPrograms().stream()
-                .map(p -> p.getProgramCode().toUpperCase())
-                .collect(Collectors.toList());
-
-        return RoleDTO.builder()
-                .id(role.getId())
-                .name(role.getName())
-                .description(role.getDescription())
-                .programs(programDTOs)
-                .permissions(permStrings)
-                .build();
-    }
-
-    private ProgramDTO toProgramDTO(Program program) {
-        return ProgramDTO.builder()
-                .id(program.getId())
-                .category1(program.getCategory1())
-                .category2(program.getCategory2())
-                .programCode(program.getProgramCode())
-                .name(program.getName())
-                .url(program.getUrl())
-                .type(program.getType())
-                .createdAt(program.getCreatedAt())
-                .updatedAt(program.getUpdatedAt())
-                .build();
     }
 }

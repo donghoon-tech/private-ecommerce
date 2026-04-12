@@ -1,5 +1,7 @@
 package com.example.ecommerce.service;
 
+import com.example.ecommerce.dto.ProgramDTO;
+import com.example.ecommerce.mapper.ProgramMapper;
 import com.example.ecommerce.entity.Program;
 import com.example.ecommerce.repository.ProgramRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class ProgramService {
 
     private final ProgramRepository programRepository;
+    private final ProgramMapper programMapper;
     
     // URL 패턴별 필요한 ProgramCode를 저장하는 캐시
     // Key: "METHOD /url/path" (예: "GET /api/products")
@@ -49,15 +52,18 @@ public class ProgramService {
     }
     
     @Transactional(readOnly = true)
-    public List<Program> getAllPrograms() {
-        return programRepository.findAll();
+    public List<ProgramDTO> getAllPrograms() {
+        return programRepository.findAll().stream()
+                .map(programMapper::toDTO)
+                .collect(Collectors.toList());
     }
 
     @Transactional
-    public Program saveProgram(Program program) {
+    public ProgramDTO saveProgram(ProgramDTO dto) {
+        Program program = programMapper.toEntity(dto);
         Program saved = programRepository.save(program);
         refreshCache(); // 변경 시 캐시 갱신
-        return saved;
+        return programMapper.toDTO(saved);
     }
 
     @Transactional

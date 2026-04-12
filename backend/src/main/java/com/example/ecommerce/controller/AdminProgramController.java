@@ -1,6 +1,6 @@
 package com.example.ecommerce.controller;
 
-import com.example.ecommerce.entity.Program;
+import com.example.ecommerce.dto.ProgramDTO;
 import com.example.ecommerce.service.ProgramService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,19 +17,19 @@ public class AdminProgramController {
     private final ProgramService programService;
 
     @GetMapping
-    public ResponseEntity<List<Program>> getAllPrograms() {
+    public ResponseEntity<List<ProgramDTO>> getAllPrograms() {
         return ResponseEntity.ok(programService.getAllPrograms());
     }
 
     @PostMapping
-    public ResponseEntity<Program> createProgram(@RequestBody Program program) {
-        return ResponseEntity.ok(programService.saveProgram(program));
+    public ResponseEntity<ProgramDTO> createProgram(@RequestBody ProgramDTO programDto) {
+        return ResponseEntity.ok(programService.saveProgram(programDto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Program> updateProgram(@PathVariable UUID id, @RequestBody Program program) {
-        program.setId(id);
-        return ResponseEntity.ok(programService.saveProgram(program));
+    public ResponseEntity<ProgramDTO> updateProgram(@PathVariable UUID id, @RequestBody ProgramDTO programDto) {
+        programDto.setId(id);
+        return ResponseEntity.ok(programService.saveProgram(programDto));
     }
 
     @DeleteMapping("/{id}")

@@ -2,6 +2,9 @@
 import { ref, watch } from 'vue'
 import api from '../utils/api'
 
+// Daum 우편번호 서비스를 위한 전역 선언
+declare const daum: any;
+
 // 상태 관리
 const form = ref({
   id: '', // username
@@ -12,7 +15,9 @@ const form = ref({
   phoneNumber: '',
   verificationCode: '',
   businessAddress: '',
+  businessDetailAddress: '',
   yardAddress: '',
+  yardDetailAddress: '',
   companyName: '' // 회사명 추가
 })
 
@@ -105,15 +110,18 @@ watch(() => form.value.password, validatePassword)
 watch(isSameAddress, (newVal) => {
   if (newVal) {
     form.value.yardAddress = form.value.businessAddress
+    form.value.yardDetailAddress = form.value.businessDetailAddress
   } else {
     form.value.yardAddress = ''
+    form.value.yardDetailAddress = ''
   }
 })
 
 // 사업장 주소가 바뀌는데 체크되어 있다면 야적장 주소도 같이 업데이트
-watch(() => form.value.businessAddress, (newVal) => {
+watch(() => [form.value.businessAddress, form.value.businessDetailAddress], ([newAddr, newDetail]) => {
   if (isSameAddress.value) {
-    form.value.yardAddress = newVal
+    form.value.yardAddress = newAddr as string
+    form.value.yardDetailAddress = newDetail as string
   }
 })
 
@@ -175,8 +183,8 @@ const handleRegister = async () => {
         companyName: form.value.companyName,
         email: form.value.email || null,
         businessNumber: form.value.businessNumber || null,
-        businessAddress: form.value.businessAddress || null,
-        yardAddress: form.value.yardAddress || null
+        businessAddress: form.value.businessAddress ? `${form.value.businessAddress} ${form.value.businessDetailAddress}`.trim() : null,
+        yardAddress: form.value.yardAddress ? `${form.value.yardAddress} ${form.value.yardDetailAddress}`.trim() : null
       })
 
       // 성공 화면 전환을 위해 errorMsg를 활용하거나 별도 상태값 사용
@@ -198,6 +206,56 @@ const handleRegister = async () => {
 }
 
 const isRegisterSuccess = ref(false)
+
+// 주소 검색 함수
+const execDaumPostcode = (type: 'business' | 'yard') => {
+  new daum.Postcode({
+    oncomplete: (data: any) => {
+      // 팝업에서 검색결과 항목을 클릭했을때 실행할 코드를 작성하는 부분.
+
+      // 각 주소의 노출 규칙에 따라 주소를 조합한다.
+      // 내려오는 변수가 값이 없는 경우엔 공백('')값을 가지므로, 이를 참고하여 분기 한다.
+      let addr = ''; // 주소 변수
+      let extraAddr = ''; // 참고항목 변수
+
+      //사용자가 선택한 주소 타입에 따라 해당 주소 값을 가져온다.
+      if (data.userSelectedType === 'R') { // 사용자가 도로명 주소를 선택했을 경우
+        addr = data.roadAddress;
+      } else { // 사용자가 지번 주소를 선택했을 경우(J)
+        addr = data.jibunAddress;
+      }
+
+      // 사용자가 선택한 주소가 도로명 타입일때 참고항목을 조합한다.
+      if (data.userSelectedType === 'R') {
+        // 법정동명이 있을 경우 추가한다. (법정리는 제외)
+        // 법정동의 경우 마지막 문자가 "동/로/가"로 끝난다.
+        if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
+          extraAddr += data.bname;
+        }
+        // 건물명이 있고, 공동주택일 경우 추가한다.
+        if (data.buildingName !== '' && data.apartment === 'Y') {
+          extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+        }
+        // 표시할 참고항목이 있을 경우, 괄호까지 추가한 최종 문자열을 만든다.
+        if (extraAddr !== '') {
+          extraAddr = ' (' + extraAddr + ')';
+        }
+      }
+
+      // 주소 정보를 해당 필드에 넣는다.
+      if (type === 'business') {
+        form.value.businessAddress = `(${data.zonecode}) ${addr}${extraAddr}`;
+        // 상세 주소 필드에 포커스 (선택 사항)
+        const detailInput = document.getElementById('businessDetailAddress');
+        if (detailInput) detailInput.focus();
+      } else {
+        form.value.yardAddress = `(${data.zonecode}) ${addr}${extraAddr}`;
+        const detailInput = document.getElementById('yardDetailAddress');
+        if (detailInput) detailInput.focus();
+      }
+    }
+  }).open();
+}
 </script>
 
 <template>
@@ -357,13 +415,33 @@ const isRegisterSuccess = ref(false)
               <h3 class="text-lg font-medium text-gray-900">주소지 정보</h3>
 
               <!-- 사업장 주소 -->
-              <div>
+              <div class="space-y-1">
                 <label for="businessAddress" class="block text-sm font-medium text-gray-700">사업장 주소 (선택)</label>
-                <input id="businessAddress" v-model="form.businessAddress" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="서울시 강남구...">
+                <div class="flex gap-2">
+                  <input 
+                    id="businessAddress" 
+                    v-model="form.businessAddress" 
+                    type="text" 
+                    readonly 
+                    @click="execDaumPostcode('business')"
+                    class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 cursor-pointer focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                    placeholder="주소 검색 버튼을 눌러주세요"
+                  >
+                  <button type="button" @click="execDaumPostcode('business')" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap flex-shrink-0">
+                    주소 검색
+                  </button>
+                </div>
+                <input 
+                  id="businessDetailAddress" 
+                  v-model="form.businessDetailAddress" 
+                  type="text" 
+                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                  placeholder="상세 주소를 입력하세요 (건물명, 동/호수 등)"
+                >
               </div>
 
               <!-- 야적장 주소 -->
-              <div>
+              <div class="space-y-1">
                 <div class="flex items-center justify-between">
                   <label for="yardAddress" class="block text-sm font-medium text-gray-700">야적장 주소 (선택)</label>
                   <div class="flex items-center">
@@ -371,7 +449,29 @@ const isRegisterSuccess = ref(false)
                     <label for="sameAddress" class="ml-2 block text-sm text-gray-900">사업장 주소와 동일</label>
                   </div>
                 </div>
-                <input id="yardAddress" v-model="form.yardAddress" :disabled="isSameAddress" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-200" placeholder="물건을 상/하차할 주소">
+                <div class="flex gap-2">
+                  <input 
+                    id="yardAddress" 
+                    v-model="form.yardAddress" 
+                    type="text" 
+                    readonly 
+                    :disabled="isSameAddress"
+                    @click="!isSameAddress && execDaumPostcode('yard')"
+                    class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 cursor-pointer focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-200" 
+                    placeholder="주소 검색 버튼을 눌러주세요"
+                  >
+                  <button type="button" @click="execDaumPostcode('yard')" :disabled="isSameAddress" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap flex-shrink-0 disabled:bg-gray-400">
+                    주소 검색
+                  </button>
+                </div>
+                <input 
+                  id="yardDetailAddress" 
+                  v-model="form.yardDetailAddress" 
+                  type="text" 
+                  :disabled="isSameAddress"
+                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-200" 
+                  placeholder="야적장 상세 주소 (물건 상/하차 지점)"
+                >
               </div>
             </div>
 

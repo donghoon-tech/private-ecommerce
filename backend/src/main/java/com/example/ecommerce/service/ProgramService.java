@@ -22,6 +22,7 @@ public class ProgramService {
     
     // URL 패턴별 필요한 ProgramCode를 저장하는 캐시
     // Key: "METHOD /url/path" (예: "GET /api/products")
+    // TODO: 서버 다중화 시 데이터 정합성을 위해 Redis Pub/Sub 또는 공유 저장소(Redis) 기반으로 전환 필요
     private final Map<String, String> urlProgramMap = new ConcurrentHashMap<>();
 
     @PostConstruct

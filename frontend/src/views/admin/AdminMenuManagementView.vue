@@ -244,6 +244,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import api from '../../utils/api'
+import { useMenuStore } from '../../stores/menu'
+
+const menuStore = useMenuStore()
 
 interface Menu {
   id: string;
@@ -377,6 +380,7 @@ const createMenu = async () => {
     })
     isModalOpen.value = false
     await fetchMenus()
+    menuStore.fetchMenus() // Sync GNB
   } catch (err: any) {
     alert(err.response?.data || '등록 중 오류가 발생했습니다.')
   } finally {
@@ -397,6 +401,7 @@ const updateMenu = async () => {
       isVisible: form.value.isVisible
     })
     await fetchMenus()
+    menuStore.fetchMenus() // Sync GNB
     const updated = findMenuInTree(menus.value, selectedMenu.value.id)
     if (updated) selectMenu(updated)
   } catch (err: any) {
@@ -412,6 +417,7 @@ const deleteMenu = async (id: string) => {
     await api.delete(`/api/admin/menus/${id}`)
     selectedMenu.value = null
     await fetchMenus()
+    menuStore.fetchMenus() // Sync GNB
   } catch (error) {
     alert('삭제 중 오류가 발생했습니다.')
   }

@@ -34,10 +34,8 @@ public class AdminMenuController {
      */
     @GetMapping("/menus/me")
     public ResponseEntity<List<MenuDTO>> getMyMenus(Principal principal) {
-        if (principal == null) {
-            return ResponseEntity.ok(List.of());
-        }
-        return ResponseEntity.ok(menuService.getUserMenuTree(principal.getName()));
+        String username = (principal != null) ? principal.getName() : null;
+        return ResponseEntity.ok(menuService.getUserMenuTree(username));
     }
 
     @PostMapping("/admin/menus")

@@ -31,23 +31,27 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<MenuDTO> getUserMenuTree(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Set<UUID> userProgramIds = new HashSet<>();
         
-        Set<UUID> userProgramIds = user.getRole().getPrograms().stream()
-                .map(Program::getId)
-                .collect(Collectors.toSet());
+        if (username != null) {
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            userProgramIds = user.getRole().getPrograms().stream()
+                    .map(Program::getId)
+                    .collect(Collectors.toSet());
+        }
 
         List<Menu> allMenus = menuRepository.findAllWithProgram();
         
-        // Filter in memory to avoid N+1 and many DB calls
+        final Set<UUID> finalProgramIds = userProgramIds;
         List<Menu> filteredMenus = allMenus.stream()
-                .filter(m -> m.getIsVisible())
-                .filter(m -> m.getProgram() == null || userProgramIds.contains(m.getProgram().getId()))
+                .filter(m -> Boolean.TRUE.equals(m.getIsVisible()))
+                .filter(m -> m.getProgram() == null || finalProgramIds.contains(m.getProgram().getId()))
                 .collect(Collectors.toList());
 
         // Build tree from filtered list
-        List<MenuDTO> tree = buildTree(filteredMenus, userProgramIds);
+        List<MenuDTO> tree = buildTree(filteredMenus, username != null ? finalProgramIds : null);
         return tree;
     }
 

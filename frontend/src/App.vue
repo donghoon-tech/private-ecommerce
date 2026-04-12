@@ -2,22 +2,11 @@
 import { RouterView } from 'vue-router'
 import { onMounted, ref, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
+import { useMenuStore } from './stores/menu'
 import api from './utils/api'
 
-interface Menu {
-  id: string;
-  name: string;
-  parentId: string | null;
-  sortOrder: number;
-  isVisible: boolean;
-  programId?: string;
-  url?: string;
-  programCode?: string;
-  children?: Menu[];
-}
-
 const authStore = useAuthStore()
-const userMenus = ref<Menu[]>([])
+const menuStore = useMenuStore()
 const activeDropdown = ref<string | null>(null)
 
 const handleLogout = async () => {
@@ -28,39 +17,23 @@ const handleLogout = async () => {
       console.error('Logout failed on server', e)
     } finally {
       authStore.clearAuth()
-      userMenus.value = []
+      menuStore.clearMenus()
       window.location.href = '/'
     }
   }
 }
 
-const fetchUserMenus = async () => {
-  if (!authStore.isLoggedIn) {
-    userMenus.value = []
-    return
-  }
-  try {
-    const res = await api.get('/api/menus/me')
-    userMenus.value = res.data
-  } catch (error) {
-    console.error('Failed to fetch user menus', error)
-  }
-}
-
-watch(() => authStore.isLoggedIn, (newVal) => {
-  if (newVal) fetchUserMenus()
-  else userMenus.value = []
+watch(() => authStore.isLoggedIn, () => {
+  menuStore.fetchMenus()
 })
 
 watch(() => authStore.permissions, () => {
-  if (authStore.isLoggedIn) fetchUserMenus()
+  menuStore.fetchMenus()
 }, { deep: true })
 
 onMounted(async () => {
   await authStore.initAuth()
-  if (authStore.isLoggedIn) {
-    fetchUserMenus()
-  }
+  menuStore.fetchMenus()
 })
 
 const toggleDropdown = (id: string | null) => {
@@ -78,7 +51,7 @@ const toggleDropdown = (id: string | null) => {
            <!-- Dynamic Nested Menus -->
            <template v-if="authStore.isLoggedIn">
              <div 
-               v-for="menu in userMenus" 
+               v-for="menu in menuStore.userMenus" 
                :key="menu.id" 
                class="relative group"
                @mouseenter="toggleDropdown(menu.id)"
@@ -118,9 +91,21 @@ const toggleDropdown = (id: string | null) => {
              </div>
            </template>
 
-           <template v-else>
-             <router-link to="/" class="text-gray-600 hover:text-indigo-600 font-semibold transition">상품목록</router-link>
-           </template>
+            <template v-else>
+              <!-- 비로그인 상태에서는 DB에서 '연결 프로그램'이 없는 공개 메뉴들이 userMenus에 담겨 나옵니다. -->
+              <div 
+                v-for="menu in menuStore.userMenus" 
+                :key="menu.id" 
+                class="relative group"
+              >
+                <router-link 
+                  :to="menu.path || '#'"
+                  class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center"
+                >
+                  {{ menu.name }}
+                </router-link>
+              </div>
+            </template>
          </div>
 
          <div class="flex items-center space-x-6">

@@ -1,6 +1,9 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.dto.UserDTO;
+import com.example.ecommerce.exception.NotFoundException;
+import com.example.ecommerce.exception.BusinessException;
+import org.springframework.http.HttpStatus;
 import com.example.ecommerce.mapper.UserMapper;
 import com.example.ecommerce.dto.UserUpdateRequest;
 import com.example.ecommerce.entity.BusinessProfile;
@@ -32,7 +35,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDTO getMyInfo(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
 
         // 메인 사업자 프로필 조회 (없을 수도 있음 - 가입 초기 등)
         BusinessProfile mainProfile = businessProfileRepository.findByUserId(user.getId()).stream()
@@ -46,7 +49,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDTO getUserDetail(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
 
         BusinessProfile mainProfile = businessProfileRepository.findByUserId(user.getId()).stream()
                 .filter(BusinessProfile::isMain)
@@ -58,7 +61,7 @@ public class UserService {
 
     public UserDTO updateMyInfo(String username, UserUpdateRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
 
         // 유저 기본 정보 수정
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
@@ -111,10 +114,10 @@ public class UserService {
      */
     public UserDTO updateUserRole(UUID userId, String roleStr) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
 
         Role newRole = roleRepository.findByName(roleStr.toUpperCase())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 권한입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 권한입니다."));
         user.setRole(newRole);
         user.setUpdatedAt(LocalDateTime.now());
 
@@ -131,10 +134,10 @@ public class UserService {
      */
     public void approveBusinessProfile(UUID profileId, String adminUsername) {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
-                .orElseThrow(() -> new RuntimeException("프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("프로필을 찾을 수 없습니다."));
 
         User admin = userRepository.findByUsername(adminUsername)
-                .orElseThrow(() -> new RuntimeException("관리자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("관리자를 찾을 수 없습니다."));
 
         // 1. 프로필 상태 변경
         profile.setStatus(BusinessProfile.Status.approved);
@@ -146,7 +149,7 @@ public class UserService {
         // 2. 사용자 역할 변경 (UNVERIFIED -> USER)
         User user = profile.getUser();
         Role userRole = roleRepository.findByName("USER")
-                .orElseThrow(() -> new RuntimeException("USER 역할을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "USER 역할을 찾을 수 없습니다."));
         user.setRole(userRole);
     }
 
@@ -155,7 +158,7 @@ public class UserService {
      */
     public void rejectBusinessProfile(UUID profileId, String reason) {
         BusinessProfile profile = businessProfileRepository.findById(profileId)
-                .orElseThrow(() -> new RuntimeException("프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("프로필을 찾을 수 없습니다."));
 
         profile.setStatus(BusinessProfile.Status.rejected);
         profile.setRejectionReason(reason);

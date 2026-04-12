@@ -1,6 +1,10 @@
 package com.example.ecommerce.service;
 
 import com.example.ecommerce.dto.request.RegisterRequest;
+import com.example.ecommerce.exception.DuplicateException;
+import com.example.ecommerce.exception.NotFoundException;
+import com.example.ecommerce.exception.BusinessException;
+import org.springframework.http.HttpStatus;
 import com.example.ecommerce.dto.UserDTO;
 import com.example.ecommerce.mapper.UserMapper;
 import com.example.ecommerce.entity.BusinessProfile;
@@ -25,11 +29,11 @@ public class AuthService {
 
     public UserDTO register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("이미 존재하는 아이디입니다.");
+            throw new DuplicateException("이미 존재하는 아이디입니다.");
         }
         String normalizedPhone = normalizePhone(request.getPhone());
         if (userRepository.existsByRepresentativePhone(normalizedPhone)) {
-            throw new RuntimeException("이미 가입된 전화번호입니다.");
+            throw new DuplicateException("이미 가입된 전화번호입니다.");
         }
 
         // 1. 사용자 계정 생성
@@ -41,7 +45,7 @@ public class AuthService {
                 .representativePhone(normalizedPhone)
                 .email(request.getEmail())
                 .role(roleRepository.findByName("UNVERIFIED")
-                        .orElseThrow(() -> new RuntimeException("기본 권한을 찾을 수 없습니다.")))
+                        .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "기본 권한을 찾을 수 없습니다.")))
                 .businessNumber(request.getBusinessNumber())
                 .isActive(true)
                 .build();
@@ -80,7 +84,7 @@ public class AuthService {
     public String findId(String phone) {
         return userRepository.findByRepresentativePhone(normalizePhone(phone))
                 .map(User::getUsername)
-                .orElseThrow(() -> new RuntimeException("해당 번호로 가입된 아이디가 없습니다."));
+                .orElseThrow(() -> new NotFoundException("해당 번호로 가입된 아이디가 없습니다."));
     }
 
     public boolean checkPhoneExists(String phone) {
@@ -108,7 +112,7 @@ public class AuthService {
                     String cleanUserPhone = normalizePhone(u.getRepresentativePhone());
                     return cleanUserPhone.equals(cleanInputPhone);
                 })
-                .orElseThrow(() -> new RuntimeException("일치하는 회원 정보가 없습니다."));
+                .orElseThrow(() -> new NotFoundException("일치하는 회원 정보가 없습니다."));
 
         String tempPassword = generateRandomPassword();
         user.setPasswordHash(passwordEncoder.encode(tempPassword));

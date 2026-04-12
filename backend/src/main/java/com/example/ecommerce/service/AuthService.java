@@ -87,6 +87,10 @@ public class AuthService {
         return userRepository.existsByRepresentativePhone(normalizePhone(phone));
     }
 
+    public boolean checkUsernameExists(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
     public boolean checkUserAndPhoneExists(String username, String phone) {
         String cleanInputPhone = normalizePhone(phone);
         return userRepository.findByUsername(username)

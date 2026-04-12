@@ -127,6 +127,12 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
+    @PostMapping("/check-username")
+    public ResponseEntity<Map<String, Boolean>> checkUsername(@RequestBody CheckUsernameRequest request) {
+        boolean exists = authService.checkUsernameExists(request.getUsername());
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
         String tempPassword = authService.resetPassword(request.getUsername(), request.getPhone());
@@ -171,5 +177,10 @@ public class AuthController {
     public static class ResetPasswordRequest {
         private String username;
         private String phone;
+    }
+
+    @Data
+    public static class CheckUsernameRequest {
+        private String username;
     }
 }

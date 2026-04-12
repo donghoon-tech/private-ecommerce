@@ -23,6 +23,10 @@ const isSameAddress = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
 
+// 중복 확인 상태
+const isIdChecked = ref(false)
+const idCheckMsg = ref({ type: '', text: '' })
+
 // 화면 표시용 상태 메시지
 const phoneMsg = ref({ type: '', text: '' }) // type: 'error' | 'success' | 'info'
 const verificationMsg = ref({ type: '', text: '' })
@@ -51,6 +55,26 @@ const validateId = () => {
   }
 }
 
+// 아이디 중복 확인
+const checkIdDuplication = async () => {
+  validateId()
+  if (!validation.value.id.valid) return
+
+  try {
+    const response = await api.post('/api/auth/check-username', { username: form.value.id })
+    if (response.data.exists) {
+      isIdChecked.value = false
+      idCheckMsg.value = { type: 'error', text: '이미 사용 중인 아이디입니다.' }
+    } else {
+      isIdChecked.value = true
+      idCheckMsg.value = { type: 'success', text: '사용 가능한 아이디입니다.' }
+    }
+  } catch (e) {
+    console.error('아이디 중복 확인 실패:', e)
+    idCheckMsg.value = { type: 'error', text: '오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
+  }
+}
+
 // 비밀번호 유효성 검사 (8~20자, 영문+숫자 조합)
 const validatePassword = () => {
   const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,20}$/
@@ -70,7 +94,11 @@ watch(() => [form.value.password, form.value.passwordConfirm], ([pwd, confirm]) 
 })
 
 // 실시간 유효성 검사 트리거
-watch(() => form.value.id, validateId)
+watch(() => form.value.id, () => {
+  validateId()
+  isIdChecked.value = false // 아이디 변경 시 중복확인 다시 해야 함
+  idCheckMsg.value = { type: '', text: '' }
+})
 watch(() => form.value.password, validatePassword)
 
 // 주소 동기화 로직
@@ -115,6 +143,11 @@ const handleRegister = async () => {
   // 실시간 검증 실행
   validateId()
   validatePassword()
+
+  if (!isIdChecked.value) {
+    errorMsg.value = '아이디 중복 확인을 해주세요.'
+    return
+  }
 
   // 유효성 검사
   if (!validation.value.id.valid || !validation.value.password.valid) {
@@ -213,17 +246,24 @@ const isRegisterSuccess = ref(false)
               <!-- 아이디 -->
               <div>
                 <label for="id" class="block text-sm font-medium text-gray-700">아이디 <span class="text-red-500">*</span></label>
-                <input 
-                  id="id" 
-                  v-model="form.id" 
-                  @blur="validateId"
-                  type="text" 
-                  required 
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                  :class="{'border-red-500': !validation.id.valid}"
-                  placeholder="4~20자 영문 소문자, 숫자, _, -"
-                >
+                <div class="flex mt-1 gap-2">
+                  <input 
+                    id="id" 
+                    v-model="form.id" 
+                    type="text" 
+                    required 
+                    class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                    :class="{'border-red-500': !validation.id.valid}"
+                    placeholder="4~20자 영문 소문자, 숫자, _, -"
+                  >
+                  <button type="button" @click="checkIdDuplication" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap flex-shrink-0">
+                    중복 확인
+                  </button>
+                </div>
                 <p v-if="!validation.id.valid" class="mt-1 text-xs text-red-600">{{ validation.id.msg }}</p>
+                <p v-if="idCheckMsg.text" class="mt-1 text-xs" :class="idCheckMsg.type === 'success' ? 'text-green-600' : 'text-red-600'">
+                  {{ idCheckMsg.text }}
+                </p>
               </div>
 
               <!-- 비밀번호 -->
@@ -340,7 +380,7 @@ const isRegisterSuccess = ref(false)
           <div>
             <button 
               type="submit" 
-              :disabled="loading || !isPhoneVerified || !validation.id.valid || !validation.password.valid || isPasswordMismatch || !form.id || !form.password" 
+              :disabled="loading || !isPhoneVerified || !isIdChecked || !validation.id.valid || !validation.password.valid || isPasswordMismatch || !form.id || !form.password" 
               class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span v-if="loading">처리 중...</span>

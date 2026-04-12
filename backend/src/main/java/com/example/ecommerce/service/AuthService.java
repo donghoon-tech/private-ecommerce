@@ -17,6 +17,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.ecommerce.util.ValidationUtils;
+import com.example.ecommerce.dto.request.LoginRequest;
+import com.example.ecommerce.dto.response.LoginResponse;
+import com.example.ecommerce.security.JwtTokenProvider;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +36,39 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public LoginResponse login(LoginRequest loginRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+        );
+
+        String username = authentication.getName();
+
+        // ROLE_ 로 시작하는 권한(역할) 찾기
+        String role = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(auth -> auth.startsWith("ROLE_"))
+                .findFirst()
+                .map(auth -> auth.replace("ROLE_", ""))
+                .orElse("USER");
+
+        // 역할(Role)을 제외한 나머지 모든 실제 액션 퍼미션 수집
+        List<String> permissions = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(auth -> !auth.startsWith("ROLE_"))
+                .collect(Collectors.toList());
+
+        String token = jwtTokenProvider.createToken(username, role);
+
+        return LoginResponse.builder()
+                .username(username)
+                .role(role)
+                .permissions(permissions)
+                .token(token)
+                .build();
+    }
 
     public UserDTO register(RegisterRequest request) {
         // 비밀번호 복잡성 검증

@@ -1,31 +1,23 @@
 package com.example.ecommerce.controller;
 
 import com.example.ecommerce.dto.UserDTO;
-import com.example.ecommerce.security.JwtTokenProvider;
+import com.example.ecommerce.dto.response.LoginResponse;
 import com.example.ecommerce.service.AuthService;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.ecommerce.dto.request.*;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 
 @Slf4j
 @RestController
@@ -33,8 +25,6 @@ import org.springframework.beans.factory.annotation.Value;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final AuthenticationManager authenticationManager;
     private final AuthService authService;
 
     @Value("${app.cookie.secure:false}")
@@ -57,37 +47,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                    loginRequest.getUsername(), loginRequest.getPassword());
+            LoginResponse loginResponse = authService.login(loginRequest);
 
-            Authentication authentication = authenticationManager.authenticate(authenticationToken);
-
-            String username = authentication.getName();
-
-            // ROLE_ 로 시작하는 권한(역할) 찾기
-            String role = authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .filter(auth -> auth.startsWith("ROLE_"))
-                    .findFirst()
-                    .map(auth -> auth.replace("ROLE_", ""))
-                    .orElse("USER");
-
-            // 역할(Role)을 제외한 나머지 모든 실제 액션 퍼미션 수집
-            List<String> permissions = authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .filter(auth -> !auth.startsWith("ROLE_"))
-                    .collect(Collectors.toList());
-
-            String token = jwtTokenProvider.createToken(username, role);
-
-            Map<String, Object> responseBody = new HashMap<>();
-            responseBody.put("username", username);
-            responseBody.put("role", role);
-            responseBody.put("permissions", permissions);
-
-            ResponseCookie cookie = ResponseCookie.from("jwt", token)
+            ResponseCookie cookie = ResponseCookie.from("jwt", loginResponse.getToken())
                     .httpOnly(true)
-                    .secure(cookieSecure) // HTTPS에서는 true
+                    .secure(cookieSecure)
                     .path("/")
                     .maxAge(24 * 60 * 60)
                     .sameSite("Lax")
@@ -95,7 +59,7 @@ public class AuthController {
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                    .body(responseBody);
+                    .body(loginResponse);
         } catch (BadCredentialsException e) {
             log.error("Login failed: Invalid credentials for user {}", loginRequest.getUsername());
             return ResponseEntity.status(401).body(Map.of("message", "아이디 또는 비밀번호가 올바르지 않습니다."));

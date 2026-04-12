@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
+import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @RestController
@@ -35,11 +36,14 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final AuthService authService;
 
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
+
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         ResponseCookie cookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure)
                 .path("/")
                 .maxAge(0)
                 .sameSite("Lax")
@@ -82,7 +86,7 @@ public class AuthController {
 
             ResponseCookie cookie = ResponseCookie.from("jwt", token)
                     .httpOnly(true)
-                    .secure(false) // HTTPS에서는 true
+                    .secure(cookieSecure) // HTTPS에서는 true
                     .path("/")
                     .maxAge(24 * 60 * 60)
                     .sameSite("Lax")

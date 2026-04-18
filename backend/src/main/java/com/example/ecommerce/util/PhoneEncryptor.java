@@ -83,17 +83,38 @@ public class PhoneEncryptor {
 
     /**
      * 복호화. SMS 발송 등 실제 번호가 필요한 경우 사용.
+     * <p>
+     * 기존 평문 데이터와의 호환성을 위해 다음의 경우 입력값을 그대로 반환합니다:
+     * 1. Base64 형식이 아닌 경우
+     * 2. 데이터 길이가 암호문(IV + Tag) 최소 길이보다 짧은 경우
+     * 3. 복호화에 실패한 경우
+     * </p>
      */
-    public String decrypt(String encryptedBase64) {
-        if (encryptedBase64 == null) return null;
+    public String decrypt(String val) {
+        if (val == null || val.isEmpty()) return val;
+
         try {
-            byte[] combined = Base64.getDecoder().decode(encryptedBase64);
-            byte[] iv = extractIv(combined);
-            byte[] ciphertext = extractCiphertext(combined);
+            byte[] decoded;
+            try {
+                decoded = Base64.getDecoder().decode(val);
+            } catch (IllegalArgumentException e) {
+                // Base64 형식이 아니면 평문으로 간주
+                return val;
+            }
+
+            // GCM 암호문 최소 길이 체크: IV(12) + Tag(16) = 28 bytes
+            // 이보다 짧으면 우리가 생성한 암호문이 아님
+            if (decoded.length < GCM_IV_LENGTH_BYTES + (GCM_TAG_LENGTH_BITS / 8)) {
+                return val;
+            }
+
+            byte[] iv = extractIv(decoded);
+            byte[] ciphertext = extractCiphertext(decoded);
             byte[] plainBytes = doDecrypt(ciphertext, iv);
             return new String(plainBytes);
         } catch (Exception e) {
-            throw new RuntimeException("Phone decryption failed", e);
+            // 복호화 실패 시(태그 불일치 등) 평문일 가능성을 고려하여 원본 반환
+            return val;
         }
     }
 

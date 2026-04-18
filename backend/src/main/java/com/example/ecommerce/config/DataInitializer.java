@@ -92,7 +92,12 @@ public class DataInitializer implements CommandLineRunner {
 
         private List<User> createUsers() {
                 // 0. Developer
-                userRepository.findByUsername("dev").ifPresentOrElse(u -> {}, () -> {
+                userRepository.findByUsername("dev").ifPresentOrElse(u -> {
+                        // 계정이 이미 있으면 비밀번호만 강제로 1234로 초기화
+                        u.setPasswordHash(passwordEncoder.encode("1234"));
+                        userRepository.save(u);
+                        log.info("Password for 'dev' has been reset to '1234'");
+                }, () -> {
                         User developer = User.builder()
                                         .username("dev")
                                         .passwordHash(passwordEncoder.encode("1234"))
@@ -108,7 +113,11 @@ public class DataInitializer implements CommandLineRunner {
                 List<User> sellers = new ArrayList<>();
 
                 // 1. Admin
-                User admin = userRepository.findByUsername("admin").orElseGet(() -> {
+                User admin = userRepository.findByUsername("admin").map(u -> {
+                        // 관리자 계정도 비밀번호 강제 초기화
+                        u.setPasswordHash(passwordEncoder.encode("1234"));
+                        return userRepository.save(u);
+                }).orElseGet(() -> {
                         User newAdmin = User.builder()
                                         .username("admin")
                                         .passwordHash(passwordEncoder.encode("1234"))

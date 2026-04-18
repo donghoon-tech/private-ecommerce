@@ -3,6 +3,7 @@ package com.example.ecommerce.service;
 import com.example.ecommerce.dto.MenuDTO;
 import com.example.ecommerce.entity.Menu;
 import com.example.ecommerce.entity.Program;
+import com.example.ecommerce.entity.ProgramType;
 import com.example.ecommerce.entity.User;
 import com.example.ecommerce.repository.MenuRepository;
 import com.example.ecommerce.repository.ProgramRepository;
@@ -89,13 +90,16 @@ public class MenuService {
         List<MenuDTO> result = new ArrayList<>();
         for (MenuDTO node : nodes) {
             if (node.getChildren() != null && !node.getChildren().isEmpty()) {
+                // 부모 노드: 유효한 자식이 하나라도 있어야 포함
                 List<MenuDTO> validChildren = pruneEmptyNodes(node.getChildren());
                 if (!validChildren.isEmpty()) {
                     node.setChildren(validChildren);
                     result.add(node);
                 }
-            } else if (node.getProgramId() != null) {
-                // It's a valid leaf
+            } else {
+                // 리프 노드: 필터(getUserMenuTree)를 이미 통과했으므로 무조건 포함.
+                // programId가 없는 리프 = 권한 제한 없는 공개 메뉴 → 포함해야 함.
+                // programId가 있는 리프 = 이미 상위 필터에서 사용자 권한 확인 완료.
                 result.add(node);
             }
         }
@@ -103,6 +107,17 @@ public class MenuService {
     }
 
     private MenuDTO toDTOOnly(Menu menu) {
+        // path 결정 우선순위:
+        // 1. 메뉴에 직접 지정된 path가 있으면 그것을 사용
+        // 2. 없고 WEB 타입 프로그램이 연결되어 있으면 → 프로그램 URL에서 자동으로 파생
+        //    (단일 진실 공급원: programs.url이 FE 라우트 경로를 관리)
+        // 3. 둘 다 없으면 null
+        String path = menu.getPath();
+        if ((path == null || path.isBlank()) && menu.getProgram() != null
+                && menu.getProgram().getType() == ProgramType.WEB) {
+            path = menu.getProgram().getUrl();
+        }
+
         return MenuDTO.builder()
                 .id(menu.getId())
                 .name(menu.getName())
@@ -110,7 +125,7 @@ public class MenuService {
                 .sortOrder(menu.getSortOrder())
                 .isVisible(menu.getIsVisible())
                 .programId(menu.getProgram() != null ? menu.getProgram().getId() : null)
-                .path(menu.getPath())
+                .path(path)
                 .programCode(menu.getProgram() != null ? menu.getProgram().getProgramCode() : null)
                 .createdAt(menu.getCreatedAt())
                 .updatedAt(menu.getUpdatedAt())

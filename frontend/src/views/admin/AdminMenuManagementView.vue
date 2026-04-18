@@ -158,15 +158,20 @@
                 </select>
                 <p class="text-xs text-gray-400 mt-1">폴더 메뉴인 경우 비워두고, 실제 버튼/기능 메뉴일 경우 선택하세요.</p>
               </div>
-              <!-- Routing Path -->
+              <!-- Routing Path (read-only, derived from program) -->
               <div class="col-span-1">
                 <label class="block text-sm font-bold text-gray-700 mb-2">라우팅 경로 (URL Path)</label>
-                <input 
-                  v-model="form.path" 
-                  type="text" 
-                  class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none text-sm bg-white"
-                  placeholder="예: /admin/users 또는 #"
-                >
+                <div class="w-full border border-gray-200 bg-gray-50 rounded-lg p-3 text-sm min-h-[46px] flex items-center">
+                  <template v-if="form.programId">
+                    <span class="font-mono text-indigo-600 text-xs">
+                      {{ programs.find(p => p.id === form.programId)?.url || '(URL 없음)' }}
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span class="text-gray-400 italic text-xs">연결된 프로그램에서 자동으로 가져옵니다</span>
+                  </template>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">경로는 연결된 WEB 프로그램의 URL을 자동으로 사용합니다.</p>
               </div>
             </div>
           </div>
@@ -214,7 +219,16 @@
           
           <div>
             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">라우팅 경로 (URL Path)</label>
-            <input v-model="modalForm.path" type="text" class="w-full border border-gray-200 rounded-lg p-2.5 focus:border-blue-400 outline-none text-sm" placeholder="예: /admin/users 또는 #">
+            <div class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm min-h-[40px] flex items-center">
+              <template v-if="modalForm.programId">
+                <span class="font-mono text-indigo-600 text-xs">
+                  {{ programs.find(p => p.id === modalForm.programId)?.url || '(URL 없음)' }}
+                </span>
+              </template>
+              <template v-else>
+                <span class="text-gray-400 italic text-xs">프로그램 선택 시 자동으로 설정됩니다</span>
+              </template>
+            </div>
           </div>
           
           <div class="grid grid-cols-2 gap-4">
@@ -265,6 +279,7 @@ interface ProgramDTO {
   programCode: string
   name: string
   type: string
+  url?: string
 }
 
 const menus = ref<Menu[]>([])
@@ -276,7 +291,6 @@ const isModalOpen = ref(false)
 
 const form = ref({
   programId: undefined as string | undefined,
-  path: '',
   name: '',
   sortOrder: 0,
   isVisible: true
@@ -328,7 +342,6 @@ const selectMenu = (menu: Menu) => {
     selectedMenu.value = null
     form.value = {
       programId: undefined,
-      path: '',
       name: '',
       sortOrder: 0,
       isVisible: true
@@ -337,7 +350,6 @@ const selectMenu = (menu: Menu) => {
     selectedMenu.value = menu
     form.value = {
       programId: menu.programId,
-      path: menu.path || '#',
       name: menu.name,
       sortOrder: menu.sortOrder,
       isVisible: menu.isVisible
@@ -373,10 +385,10 @@ const createMenu = async () => {
     await api.post('/api/admin/menus', {
       programId: modalForm.value.programId,
       name: modalForm.value.name,
-      path: modalForm.value.path,
       parentId: modalForm.value.parentId,
       sortOrder: modalForm.value.sortOrder,
       isVisible: modalForm.value.isVisible
+      // path는 BE에서 연결된 WEB 프로그램의 URL을 자동으로 사용
     })
     isModalOpen.value = false
     await fetchMenus()
@@ -395,10 +407,10 @@ const updateMenu = async () => {
     await api.put(`/api/admin/menus/${selectedMenu.value.id}`, {
       programId: form.value.programId,
       name: form.value.name,
-      path: form.value.path,
       parentId: selectedMenu.value.parentId,
       sortOrder: form.value.sortOrder,
       isVisible: form.value.isVisible
+      // path는 BE에서 연결된 WEB 프로그램의 URL을 자동으로 사용
     })
     await fetchMenus()
     menuStore.fetchMenus() // Sync GNB

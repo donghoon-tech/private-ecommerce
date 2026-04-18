@@ -54,7 +54,7 @@
           <tr 
             v-for="user in paginatedUsers" 
             :key="user.id"
-            @click="router.push(`/admin/users/${user.id}`)"
+            @click="openDetail(user)"
             class="hover:bg-gray-50 cursor-pointer transition"
           >
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.name }}</td>
@@ -122,6 +122,70 @@
         </p>
       </div>
     </div>
+
+    <!-- 사용자 상세 사이드 패널 -->
+    <RightPanel
+      :is-open="userDetailOpen"
+      :title="selectedUser ? `${selectedUser.name} 상세 정보` : '사용자 정보'"
+      subtitle="사용자의 기본 정보 및 가입 승인 상태를 관리합니다."
+      @close="userDetailOpen = false"
+    >
+      <div v-if="selectedUser" class="space-y-6">
+        <div class="bg-gray-50 p-4 rounded-lg space-y-4">
+          <h3 class="text-sm font-bold text-gray-900 border-b pb-2">기본 정보</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">아이디</label>
+              <div class="text-sm font-medium">{{ selectedUser.username }}</div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">이름</label>
+              <div class="text-sm font-medium">{{ selectedUser.name }}</div>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs text-gray-500 mb-1">이메일</label>
+              <div class="text-sm font-medium">{{ selectedUser.email || '-' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg space-y-4">
+          <h3 class="text-sm font-bold text-gray-900 border-b pb-2">회사 및 권한</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+              <label class="block text-xs text-gray-500 mb-1">회사명</label>
+              <div class="text-sm font-medium">{{ selectedUser.companyName || '-' }}</div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">역할</label>
+              <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">{{ selectedUser.roleDescription || selectedUser.role }}</span>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">상태</label>
+              <span 
+                :class="[
+                  'px-2 py-0.5 text-xs font-bold rounded-full',
+                  selectedUser.businessStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                  selectedUser.businessStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                  selectedUser.businessStatus === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                ]"
+              >
+                {{ getStatusText(selectedUser.businessStatus) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedUser.businessStatus === 'PENDING'" class="flex gap-2 pt-4">
+          <button @click="approveUser" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">가입 승인</button>
+          <button @click="rejectUser" class="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition">가입 반려</button>
+        </div>
+      </div>
+      <template #footer>
+        <button @click="userDetailOpen = false" class="px-6 py-2 border border-gray-300 rounded-lg text-sm font-bold hover:bg-gray-50">닫기</button>
+      </template>
+    </RightPanel>
   </div>
 </template>
 
@@ -129,6 +193,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api'
+import RightPanel from '../../components/RightPanel.vue'
 
 const router = useRouter()
 
@@ -152,6 +217,8 @@ interface User {
 const activeTab = ref<'all' | 'PENDING'>('all')
 const users = ref<User[]>([])
 const loading = ref(false)
+const userDetailOpen = ref(false)
+const selectedUser = ref<User | null>(null)
 
 // Pagination
 const currentPage = ref(1)
@@ -212,6 +279,32 @@ const fetchUsers = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const openDetail = (user: User) => {
+  selectedUser.value = user
+  userDetailOpen.value = true
+}
+
+const approveUser = async () => {
+  if (!selectedUser.value?.profileId) return
+  if (!confirm('승인하시겠습니까?')) return
+  try {
+    await api.put(`/api/admin/business-profiles/${selectedUser.value.profileId}/approve`, {})
+    userDetailOpen.value = false
+    fetchUsers()
+  } catch (e) { alert('승인 실패') }
+}
+
+const rejectUser = async () => {
+  if (!selectedUser.value?.profileId) return
+  const reason = prompt('반려 사유:')
+  if (!reason) return
+  try {
+    await api.put(`/api/admin/business-profiles/${selectedUser.value.profileId}/reject`, { reason })
+    userDetailOpen.value = false
+    fetchUsers()
+  } catch (e) { alert('반려 실패') }
 }
 
 onMounted(() => {

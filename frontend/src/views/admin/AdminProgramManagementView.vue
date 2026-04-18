@@ -1,43 +1,45 @@
 <template>
   <div class="admin-program-mgmt">
-    <div class="header-section">
-      <h1><i class="pi pi-cog"></i> 프로그램 등록관리</h1>
-      <p class="subtitle">시스템의 모든 물리적 화면(WEB) 소스와 인터페이스(API) 명세를 통합 정의합니다.</p>
-    </div>
 
-    <div class="filter-card">
-      <div class="tabs">
-        <button 
-          v-for="tab in ['전체', 'WEB', 'API']" 
-          :key="tab"
-          :class="{ active: currentTab === tab }"
-          @click="currentTab = tab"
-        >
-          {{ tab }}
-        </button>
+    <!-- 상단: 제목 + 검색 영역 (같은 줄) -->
+    <div class="top-header">
+      <div class="title-block">
+        <h1>🛠️ 프로그램 등록관리</h1>
+        <p class="subtitle">시스템의 모든 물리적 화면(WEB)소스와 인터페이스(API) 명세를 통합 정의합니다.</p>
       </div>
-
       <div class="search-bar">
-        <div class="input-group">
-          <label>프로그램ID</label>
-          <input v-model="filters.code" type="text" placeholder="ID 입력">
+        <div class="search-field">
+          <span class="field-label">프로그램ID</span>
+          <input v-model="filters.code" type="text" placeholder="">
         </div>
-        <div class="input-group">
-          <label>프로그램명</label>
-          <input v-model="filters.name" type="text" placeholder="이름 입력">
+        <div class="search-field">
+          <span class="field-label">프로그램명</span>
+          <input v-model="filters.name" type="text" placeholder="">
         </div>
-        <div class="input-group">
-          <label>프로그램URL</label>
-          <input v-model="filters.url" type="text" placeholder="URL 입력">
+        <div class="search-field">
+          <span class="field-label">프로그램URL</span>
+          <input v-model="filters.url" type="text" placeholder="">
         </div>
         <button class="btn-search" @click="fetchPrograms">조회</button>
       </div>
     </div>
 
-    <div class="table-actions">
-      <button class="btn-new" @click="openModal()"><i class="pi pi-plus"></i> 신규등록</button>
+    <!-- 탭 + 신규등록 버튼 -->
+    <div class="table-toolbar">
+      <div class="tabs">
+        <button
+          v-for="tab in ['전체', 'WEB', 'API']"
+          :key="tab"
+          :class="{ active: currentTab === tab }"
+          @click="currentTab = tab; currentPage = 1"
+        >
+          {{ tab }}
+        </button>
+      </div>
+      <button class="btn-new" @click="openModal()">신규등록</button>
     </div>
 
+    <!-- 테이블 -->
     <div class="table-container">
       <table class="modern-table">
         <thead>
@@ -53,10 +55,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(p, index) in filteredPrograms" :key="p.id">
-            <td>{{ index + 1 }}</td>
-            <td>{{ p.category1 || '-' }}</td>
-            <td>{{ p.category2 || '-' }}</td>
+          <tr v-for="(p, index) in pagedPrograms" :key="p.id">
+            <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+            <td>{{ p.category1 || '' }}</td>
+            <td>{{ p.category2 || '' }}</td>
             <td class="code">{{ p.programCode }}</td>
             <td>{{ p.name }}</td>
             <td class="url">{{ p.url }}</td>
@@ -64,71 +66,131 @@
               <span :class="['badge', p.type.toLowerCase()]">{{ p.type }}</span>
             </td>
             <td class="actions">
-              <button class="btn-icon" @click="openModal(p)"><i class="pi pi-cog"></i></button>
-              <button class="btn-icon delete" @click="deleteProgram(p.id)"><i class="pi pi-trash"></i></button>
+              <button class="btn-icon" @click="openModal(p)" title="수정">⚙️</button>
+              <button class="btn-icon delete" @click="deleteProgram(p.id)" title="삭제">🗑️</button>
             </td>
+          </tr>
+          <tr v-if="pagedPrograms.length === 0">
+            <td colspan="8" class="empty-row">데이터가 없습니다.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Modal for Create/Edit -->
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal-content">
-        <h2>{{ editingId ? '프로그램 수정' : '신규 프로그램 등록' }}</h2>
-        <form @submit.prevent="saveProgram">
-          <div class="form-grid">
-            <div class="field">
-              <label>대분류</label>
-              <input v-model="form.category1" type="text">
-            </div>
-            <div class="field">
-              <label>중분류</label>
-              <input v-model="form.category2" type="text">
-            </div>
-            <div class="field">
-              <label>프로그램ID (Code)</label>
-              <input v-model="form.programCode" type="text" required>
-            </div>
-            <div class="field">
-              <label>프로그램명</label>
-              <input v-model="form.name" type="text" required>
-            </div>
-            <div class="field full">
-              <label>URL (AntPath 패턴 지원)</label>
-              <input v-model="form.url" type="text" required placeholder="/api/v1/...">
-            </div>
-            <div class="field">
-              <label>HTTP 메소드</label>
-              <select v-model="form.httpMethod">
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="DELETE">DELETE</option>
-                <option value="ANY">ANY</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>유형</label>
-              <select v-model="form.type">
-                <option value="WEB">WEB</option>
-                <option value="API">API</option>
-              </select>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="showModal = false">취소</button>
-            <button type="submit" class="btn-primary">저장</button>
-          </div>
-        </form>
-      </div>
+    <!-- 페이지네이션 -->
+    <div class="pagination" v-if="totalPages > 1">
+      <button class="page-btn" @click="currentPage = 1" :disabled="currentPage === 1">
+        «
+      </button>
+      <button class="page-btn" @click="currentPage--" :disabled="currentPage === 1">
+        ‹
+      </button>
+      <button
+        v-for="page in visiblePages"
+        :key="page"
+        class="page-btn"
+        :class="{ active: currentPage === page }"
+        @click="currentPage = page"
+      >
+        {{ page }}
+      </button>
+      <button class="page-btn" @click="currentPage++" :disabled="currentPage === totalPages">
+        ›
+      </button>
+      <button class="page-btn" @click="currentPage = totalPages" :disabled="currentPage === totalPages">
+        »
+      </button>
     </div>
+
+    <!-- 등록/수정 사이드 패널 -->
+    <RightPanel
+      :is-open="showModal"
+      :title="editingId ? '프로그램 수정' : '신규 프로그램 등록'"
+      subtitle="시스템 프로그램 및 API 명세를 통합 관리합니다."
+      @close="showModal = false"
+      @save="saveProgram"
+    >
+      <div class="form-grid">
+
+        <!-- 1. 유형 선택 (맨 먼저 - 이것에 따라 아래 필드가 달라짐) -->
+        <div class="field">
+          <label>유형 <span class="required">*</span></label>
+          <div class="type-toggle">
+            <button
+              :class="['type-btn', form.type === 'WEB' ? 'active web' : '']"
+              type="button"
+              @click="onTypeChange('WEB')"
+            >
+              🖥️ WEB
+              <span class="type-desc">화면 프로그램</span>
+            </button>
+            <button
+              :class="['type-btn', form.type === 'API' ? 'active api' : '']"
+              type="button"
+              @click="onTypeChange('API')"
+            >
+              🔌 API
+              <span class="type-desc">백엔드 인터페이스</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. WEB 전용: 대분류 / 중분류 -->
+        <template v-if="form.type === 'WEB'">
+          <div class="field">
+            <label>대분류</label>
+            <input v-model="form.category1" type="text" placeholder="예: 시스템관리">
+          </div>
+          <div class="field">
+            <label>중분류</label>
+            <input v-model="form.category2" type="text" placeholder="예: 프로그램관리">
+          </div>
+        </template>
+
+        <!-- 3. 공통: 프로그램ID / 프로그램명 -->
+        <div class="field">
+          <label>프로그램ID <span class="required">*</span></label>
+          <input v-model="form.programCode" type="text" required placeholder="예: PG_PROG_MGMT">
+        </div>
+        <div class="field">
+          <label>프로그램명 <span class="required">*</span></label>
+          <input v-model="form.name" type="text" required placeholder="예: 프로그램 등록관리">
+        </div>
+
+        <!-- 4. 공통: URL -->
+        <div class="field full">
+          <label>URL <span class="required">*</span></label>
+          <input
+            v-model="form.url"
+            type="text"
+            required
+            :placeholder="form.type === 'WEB' ? '/admin/programs' : '/api/admin/programs/**'"
+          >
+          <span class="field-hint">AntPath 패턴 지원 (예: /api/**)</span>
+        </div>
+
+        <!-- 5. API 전용: HTTP 메소드 -->
+        <div v-if="form.type === 'API'" class="field">
+          <label>HTTP 메소드 <span class="required">*</span></label>
+          <select v-model="form.httpMethod">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="ANY">ANY (전체)</option>
+          </select>
+          <span class="field-hint">어떤 HTTP 요청을 허용할지 선택하세요.</span>
+        </div>
+
+      </div>
+    </RightPanel>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import RightPanel from '../../components/RightPanel.vue';
 
 interface Program {
   id?: string;
@@ -146,6 +208,8 @@ const currentTab = ref('전체');
 const filters = ref({ code: '', name: '', url: '' });
 const showModal = ref(false);
 const editingId = ref<string | null>(null);
+const currentPage = ref(1);
+const pageSize = 8;
 
 const form = ref<Program>({
   category1: '',
@@ -161,6 +225,7 @@ const fetchPrograms = async () => {
   try {
     const res = await axios.get('/api/admin/programs');
     programs.value = res.data;
+    currentPage.value = 1;
   } catch (err) {
     console.error('Failed to fetch programs', err);
   }
@@ -175,6 +240,34 @@ const filteredPrograms = computed(() => {
     return tabMatch && codeMatch && nameMatch && urlMatch;
   });
 });
+
+const totalPages = computed(() => Math.ceil(filteredPrograms.value.length / pageSize));
+
+const pagedPrograms = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  return filteredPrograms.value.slice(start, start + pageSize);
+});
+
+const visiblePages = computed(() => {
+  const pages: number[] = [];
+  const start = Math.max(1, currentPage.value - 2);
+  const end = Math.min(totalPages.value, start + 4);
+  for (let i = start; i <= end; i++) pages.push(i);
+  return pages;
+});
+
+const onTypeChange = (newType: 'WEB' | 'API') => {
+  form.value.type = newType;
+  if (newType === 'WEB') {
+    // WEB에는 HTTP 메소드 불필요 → 초기화
+    form.value.httpMethod = '';
+  } else {
+    // API에는 대분류/중분류 불필요 → 초기화
+    form.value.category1 = '';
+    form.value.category2 = '';
+    form.value.httpMethod = form.value.httpMethod || 'ANY';
+  }
+};
 
 const openModal = (p?: Program) => {
   if (p) {
@@ -219,114 +312,148 @@ onMounted(fetchPrograms);
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
-.header-section {
-  margin-bottom: 2rem;
+/* ── 상단 헤더: 제목(좌) + 검색(우) ── */
+.top-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
-.header-section h1 {
-  font-size: 1.8rem;
-  color: #2c3e50;
+.title-block h1 {
+  font-size: 1.6rem;
+  color: #1a202c;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem 0;
+}
+
+.title-block h1 .pi {
+  color: #4a6cf7;
+  font-size: 1.5rem;
 }
 
 .subtitle {
-  color: #7f8c8d;
-  margin-top: 0.5rem;
+  color: #718096;
+  font-size: 0.875rem;
+  margin: 0;
 }
 
-.filter-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  margin-bottom: 1.5rem;
+/* ── 검색 바 ── */
+.search-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.search-field input {
+  width: 160px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-field input:focus {
+  border-color: #4a6cf7;
+}
+
+.btn-search {
+  padding: 0.5rem 1.5rem;
+  background: #1a202c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-search:hover {
+  background: #2d3748;
+}
+
+/* ── 탭 + 신규등록 버튼 툴바 ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
 }
 
 .tabs {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.5rem;
+  gap: 0.4rem;
 }
 
 .tabs button {
-  padding: 0.5rem 1.5rem;
-  border: none;
-  background: none;
+  padding: 0.45rem 1.4rem;
+  border: 1px solid #cbd5e0;
+  background: white;
   cursor: pointer;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #95a5a6;
+  color: #4a5568;
   border-radius: 6px;
   transition: all 0.2s;
 }
 
 .tabs button.active {
-  background: #3498db;
+  background: #4a6cf7;
   color: white;
+  border-color: #4a6cf7;
 }
 
-.search-bar {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-end;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-.input-group label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #34495e;
-}
-
-.input-group input {
-  padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-.btn-search {
-  padding: 0.6rem 2rem;
-  background: #2c3e50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.table-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
+.tabs button:not(.active):hover {
+  background: #f7fafc;
 }
 
 .btn-new {
-  padding: 0.6rem 1.2rem;
-  background: #27ae60;
+  padding: 0.5rem 1.25rem;
+  background: #38a169;
   color: white;
   border: none;
   border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  transition: background 0.2s;
 }
 
+.btn-new:hover {
+  background: #2f855a;
+}
+
+/* ── 테이블 ── */
 .table-container {
   background: white;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
 }
 
 .modern-table {
@@ -336,94 +463,257 @@ onMounted(fetchPrograms);
 
 .modern-table th {
   background: #f8f9fa;
-  padding: 1rem;
-  text-align: left;
-  font-size: 0.9rem;
-  color: #7f8c8d;
-  border-bottom: 2px solid #eee;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #4a5568;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .modern-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #f1f1f1;
-  font-size: 0.95rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #f0f4f8;
+  font-size: 0.9rem;
+  color: #2d3748;
+  text-align: center;
+}
+
+.modern-table tbody tr:hover {
+  background: #f7fafc;
+}
+
+.modern-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .code {
-  font-family: monospace;
+  font-family: 'Consolas', 'Monaco', monospace;
   color: #e67e22;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 0.85rem;
 }
 
 .url {
-  color: #7f8c8d;
-  font-size: 0.9rem;
+  color: #718096;
+  font-size: 0.85rem;
+  text-align: left !important;
 }
 
+/* ── 뱃지 (Solid 스타일) ── */
 .badge {
-  padding: 0.25rem 0.6rem;
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
   border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.badge.web { background: #ebf5ff; color: #3182ce; }
-.badge.api { background: #f0fff4; color: #38a169; }
+.badge.web {
+  background: #2b4acb;
+  color: white;
+}
 
+.badge.api {
+  background: #38a169;
+  color: white;
+}
+
+/* ── 관리 버튼 ── */
 .actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  justify-content: center;
 }
 
 .btn-icon {
   background: none;
-  border: 1px solid #eee;
-  padding: 0.4rem;
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.5rem;
   border-radius: 4px;
   cursor: pointer;
-  color: #7f8c8d;
+  color: #718096;
+  font-size: 0.9rem;
+  transition: all 0.15s;
 }
 
-.btn-icon:hover { background: #f8f9fa; }
-.btn-icon.delete:hover { color: #e74c3c; border-color: #fab1a0; }
+.btn-icon:hover {
+  background: #edf2f7;
+  color: #2d3748;
+}
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+.btn-icon.delete:hover {
+  color: #e53e3e;
+  border-color: #fed7d7;
+  background: #fff5f5;
+}
+
+/* ── 빈 행 ── */
+.empty-row {
+  text-align: center !important;
+  color: #a0aec0;
+  padding: 2rem !important;
+}
+
+/* ── 페이지네이션 ── */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 1.5rem;
+}
+
+.page-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 0.5rem;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #4a5568;
+  transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
 }
 
-.modal-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  width: 600px;
+.page-btn:hover:not(:disabled) {
+  border-color: #4a6cf7;
+  color: #4a6cf7;
 }
 
+.page-btn.active {
+  background: #4a6cf7;
+  border-color: #4a6cf7;
+  color: white;
+  font-weight: 600;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+/* ── 폼 스타일 (사이드바 최적화) ── */
 .form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 1.5rem 0;
-}
-
-.field { display: flex; flex-direction: column; gap: 0.4rem; }
-.field.full { grid-column: span 2; }
-.field label { font-size: 0.9rem; font-weight: 600; }
-.field input, .field select { padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; }
-
-.modal-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1rem;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.btn-primary { background: #3498db; color: white; border: none; padding: 0.6rem 2rem; border-radius: 4px; cursor: pointer; }
-.btn-secondary { background: #eee; border: none; padding: 0.6rem 2rem; border-radius: 4px; cursor: pointer; }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.field input,
+.field select {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #4a6cf7;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(74, 108, 247, 0.1);
+}
+
+.field input::placeholder {
+  color: #a0aec0;
+}
+
+.field.full {
+  width: 100%;
+}
+
+/* ── 필수 표시 ── */
+.required {
+  color: #e53e3e;
+  margin-left: 2px;
+}
+
+/* ── 필드 힌트 ── */
+.field-hint {
+  font-size: 0.78rem;
+  color: #a0aec0;
+  margin-top: 0.25rem;
+}
+
+/* ── 유형 토글 버튼 ── */
+.type-toggle {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.type-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #4a5568;
+  transition: all 0.2s;
+}
+
+.type-btn:hover {
+  border-color: #a0aec0;
+  background: #edf2f7;
+}
+
+.type-btn .type-desc {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #718096;
+}
+
+.type-btn.active.web {
+  border-color: #2b4acb;
+  background: #ebf0ff;
+  color: #2b4acb;
+}
+
+.type-btn.active.web .type-desc {
+  color: #4a6cf7;
+}
+
+.type-btn.active.api {
+  border-color: #38a169;
+  background: #f0fff4;
+  color: #38a169;
+}
+
+.type-btn.active.api .type-desc {
+  color: #48bb78;
+}
 </style>

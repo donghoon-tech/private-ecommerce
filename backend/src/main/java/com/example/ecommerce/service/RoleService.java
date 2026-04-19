@@ -31,7 +31,9 @@ public class RoleService {
     private final ProgramMapper programMapper;
 
     /**
-     * 전체 Role 목록 조회 (각 Role에 바인딩된 Program 포함)
+     * 전체 권한(Role) 목록 및 각 권한에 할당된 프로그램(접근 가능 URL/Action) 정보를 함께 조회합니다.
+     *
+     * @return 권한 및 프로그램 정보가 포함된 DTO 리스트
      */
     @Transactional(readOnly = true)
     public List<RoleDTO> getAllRoles() {
@@ -41,7 +43,11 @@ public class RoleService {
     }
 
     /**
-     * 특정 Role 조회
+     * 식별자(UUID) 기반으로 특정 Role 단건의 상세 내역을 조회합니다.
+     *
+     * @param roleId 대상 권한의 식별자
+     * @return 대상 권한 DTO
+     * @throws RuntimeException 대상을 찾지 못한 경우 예외
      */
     @Transactional(readOnly = true)
     public RoleDTO getRoleById(UUID roleId) {
@@ -51,7 +57,10 @@ public class RoleService {
     }
 
     /**
-     * 전체 Program 목록 조회 (읽기 전용)
+     * 시스템 전체 프로그램(메뉴, API 등) 목록을 조회합니다.
+     * 프론트엔드에서 Role에 세부 권한을 부여할 때 선택 목록으로 활용됩니다.
+     *
+     * @return 전체 프로그램 DTO 리스트
      */
     @Transactional(readOnly = true)
     public List<ProgramDTO> getAllPrograms() {
@@ -61,7 +70,13 @@ public class RoleService {
     }
 
     /**
-     * Role 생성
+     * 새로운 기능 권한(Role)을 생성하고, 선택된 프로그램들을 연관관계로 즉시 매핑합니다.
+     * Role 이름은 무조건 대문자로 변환되어 등록되며 중복 생성을 방지합니다.
+     *
+     * @param name Role 이름 (예: ADMIN_SUB)
+     * @param description Role에 대한 설명
+     * @param programIds 연관시킬 프로그램 ID 목록
+     * @return 생성 완료된 권한 정보 DTO
      */
     public RoleDTO createRole(String name, String description, List<UUID> programIds) {
         if (roleRepository.findByName(name).isPresent()) {
@@ -81,7 +96,14 @@ public class RoleService {
     }
 
     /**
-     * Role의 Program 바인딩 수정 (이름, 설명 포함)
+     * 기존 권한(Role)의 기본 정보(이름, 설명) 및 프로그램 할당 내역을 수정합니다.
+     * 프로그램 ID 목록이 주어질 경우 기존 할당은 모두 제거되고 새로운 목록으로 완전히 덮어씌워(Override) 집니다.
+     *
+     * @param roleId 대상 권한 ID
+     * @param name 수정할 이름 (null 허용, 대문자 변환됨)
+     * @param description 수정할 설명
+     * @param programIds 새로 덮어씌울 프로그램 ID 목록
+     * @return 수정 반영된 DTO
      */
     public RoleDTO updateRole(UUID roleId, String name, String description, List<UUID> programIds) {
         Role role = roleRepository.findById(roleId)
@@ -102,7 +124,11 @@ public class RoleService {
     }
 
     /**
-     * Role에 Program 다중 할당
+     * 특정 Role에 여러 프로그램을 추가(병합)로 할당합니다. 기존 할당된 내역은 보존됩니다.
+     *
+     * @param roleId 권한 ID
+     * @param programIds 추가할 프로그램 ID 목록
+     * @return 병합 할당된 결과 권한 DTO
      */
     public RoleDTO assignPrograms(UUID roleId, List<UUID> programIds) {
         Role role = roleRepository.findById(roleId)
@@ -115,7 +141,11 @@ public class RoleService {
     }
 
     /**
-     * Role에서 Program 다중 회수
+     * 특정 Role에서 할당된 일부 프로그램들을 회수(해제) 처리합니다.
+     *
+     * @param roleId 권한 ID
+     * @param programIds 회수할 대상 제한 프로그램 ID 목록
+     * @return 회수 후 결과 권한 DTO
      */
     public RoleDTO removePrograms(UUID roleId, List<UUID> programIds) {
         Role role = roleRepository.findById(roleId)
@@ -128,7 +158,10 @@ public class RoleService {
     }
 
     /**
-     * Role 삭제 (기본 Role인 UNVERIFIED, USER, ADMIN은 삭제 불가)
+     * 권한(Role)을 시스템에서 삭제 처리합니다.
+     * 'UNVERIFIED', 'USER', 'ADMIN'과 같은 시스템 운영 필수 코어 Role은 삭제할 수 없도록 강제 방어 처리 되어 있습니다.
+     *
+     * @param roleId 삭제할 권한의 식별자
      */
     public void deleteRole(UUID roleId) {
         Role role = roleRepository.findById(roleId)

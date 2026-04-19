@@ -24,12 +24,26 @@ public class MenuService {
     private final ProgramRepository programRepository;
     private final UserRepository userRepository;
 
+    /**
+     * 시스템에 등록된 전체 메뉴를 계층형 트리(Tree) 구조로 조회합니다.
+     * 주로 관리자 설정 페이지에서 권한에 상관없이 메뉴 트리를 확인할 때 사용됩니다.
+     *
+     * @return 계층형 구조의 전체 메뉴 DTO 리스트
+     */
     @Transactional(readOnly = true)
     public List<MenuDTO> getAllMenuTree() {
         List<Menu> allMenus = menuRepository.findAllWithProgram();
-        return buildTree(allMenus, null);
+        return buildTree(allMenus);
     }
 
+    /**
+     * 특정 사용자(username)의 권한에 맞는 메뉴만 필터링하여 트리(Tree) 구조로 조회합니다.
+     * 연결된 프로그램(Program)의 권한 유무, PUBLIC 속성 여부를 검사하며,
+     * 자식 노드가 다 권한에 의해 가려졌거나 비어있는 부모 노드는 자동으로 가지치기(Prune)되어 결과에서 제외되는 특성이 있습니다.
+     *
+     * @param username 권한을 검증할 사용자 식별자 (NULL시 게스트로 간주)
+     * @return 해당 사용자에게 허용된 계층형 구조의 메뉴 목록
+     */
     @Transactional(readOnly = true)
     public List<MenuDTO> getUserMenuTree(String username) {
         Set<UUID> userProgramIds = new HashSet<>();
@@ -52,11 +66,11 @@ public class MenuService {
                 .collect(Collectors.toList());
 
         // Build tree from filtered list
-        List<MenuDTO> tree = buildTree(filteredMenus, null); 
+        List<MenuDTO> tree = buildTree(filteredMenus); 
         return pruneEmptyNodes(tree);
     }
 
-    private List<MenuDTO> buildTree(List<Menu> allMenus, Set<UUID> userProgramIds) {
+    private List<MenuDTO> buildTree(List<Menu> allMenus) {
         Map<UUID, MenuDTO> dtoMap = new LinkedHashMap<>();
         
         // First convert all to DTO
@@ -132,6 +146,17 @@ public class MenuService {
                 .build();
     }
 
+    /**
+     * 새로운 메뉴를 생성합니다.
+     *
+     * @param parentId 부모 메뉴 ID (최상단 메뉴일 경우 null)
+     * @param programId 메뉴에 연결할 프로그램 ID (단순 상위 분류일 경우 null)
+     * @param name 메뉴 표시명
+     * @param sortOrder 정렬 순서
+     * @param isVisible 메뉴의 GNB 노출 여부
+     * @param path 고정 임의 경로 (프로그램 없이 직접 URL 지정 시 사용)
+     * @return 생성된 메뉴 응답 DTO (자식 정보 포함)
+     */
     public MenuDTO createMenu(UUID parentId, UUID programId, String name, Integer sortOrder, Boolean isVisible, String path) {
         Menu parent = null;
         if (parentId != null) {
@@ -157,6 +182,19 @@ public class MenuService {
         return toDTOWithChildren(menuRepository.save(menu));
     }
 
+    /**
+     * 기존 메뉴 항목의 정보를 수정합니다.
+     * 부모를 본인 스스로 지정할 수 없는 '자기 참조 방지 검증(Cannot be its own parent)'이 들어 있습니다.
+     * 
+     * @param id 수정 대상 메뉴의 ID
+     * @param parentId 변경할 부모 메뉴의 ID
+     * @param programId 변경할 연결 프로그램의 ID
+     * @param name 변경할 표시명
+     * @param sortOrder 변경할 정렬 순서
+     * @param isVisible 노출 여부
+     * @param path 변경할 직접 지정 경로
+     * @return 업데이트된 메뉴에 대한 상세 DTO (자식 포함)
+     */
     public MenuDTO updateMenu(UUID id, UUID parentId, UUID programId, String name, Integer sortOrder, Boolean isVisible, String path) {
         Menu menu = menuRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Menu not found"));
@@ -188,6 +226,12 @@ public class MenuService {
         return toDTOWithChildren(menuRepository.save(menu));
     }
 
+    /**
+     * 대상 메뉴를 삭제합니다.
+     * (자식 메뉴가 DB에 의해 cascade 등으로 지워지는지, 혹은 제약에 걸리는지 주의가 필요합니다.)
+     *
+     * @param id 삭제 대상 메뉴 ID
+     */
     public void deleteMenu(UUID id) {
         menuRepository.deleteById(id);
     }

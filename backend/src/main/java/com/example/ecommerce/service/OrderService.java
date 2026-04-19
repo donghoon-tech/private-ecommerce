@@ -18,6 +18,12 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
 
+    /**
+     * 특정 사용자가 구매한 주문 내역 목록을 조회합니다.
+     *
+     * @param userId 주문 내역을 조회할 구매자의 사용자 식별자(UUID)
+     * @return 조회된 주문 정보 목록 DTO 리스트
+     */
     public List<OrderDTO> getMyOrders(UUID userId) {
         return orderRepository.findByBuyerId(userId).stream()
                 .map(orderMapper::toDTO)

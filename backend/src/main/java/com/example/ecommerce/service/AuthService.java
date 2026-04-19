@@ -43,6 +43,13 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PhoneEncryptor phoneEncryptor;
 
+    /**
+     * 사용자 로그인을 처리하고 JWT 토큰을 발급합니다.
+     * 인증 정보에서 'ROLE_' 접두사가 붙은 권한(Role)과 그 외 세부 권한(Permissions)을 분리하여 반환하는 특이사항이 있습니다.
+     *
+     * @param loginRequest 사용자가 입력한 아이디와 비밀번호
+     * @return 사용자명, 권한, 세부 권한 목록 및 JWT 토큰을 포함한 로그인 응답
+     */
     public LoginResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
@@ -74,6 +81,14 @@ public class AuthService {
                 .build();
     }
 
+    /**
+     * 신규 사용자를 회원가입 처리하고 연관된 사업자 프로필을 '승인 대기(PENDING)' 상태로 일괄 생성합니다.
+     * 비밀번호 복잡성 검증 및 휴대폰 번호 암호화 기반 중복 검증 로직이 포함되어 있습니다.
+     *
+     * @param request 회원가입 요청 정보 (아이디, 비밀번호, 상호명, 대표번호 등)
+     * @return 가입 완료된 사용자 정보
+     * @throws DuplicateException 아이디 혹은 전화번호가 이미 존재하는 경우
+     */
     public UserDTO register(RegisterRequest request) {
         // 비밀번호 복잡성 검증
         ValidationUtils.validatePassword(request.getPassword());
@@ -131,6 +146,14 @@ public class AuthService {
         return userMapper.toDTO(savedUser, profile);
     }
 
+    /**
+     * 등록된 휴대폰 번호로 사용자 아이디(username)를 찾습니다.
+     * 보안을 위해 휴대폰 번호를 정규화 및 암호화하여 데이터베이스에서 조회합니다.
+     *
+     * @param phone 찾고자 하는 가입자의 휴대폰 번호
+     * @return 일치하는 사용자 아이디
+     * @throws NotFoundException 일치하는 정보가 없을 경우
+     */
     public String findId(String phone) {
         String normalizedPhone = ValidationUtils.normalizePhone(phone);
         return userRepository.findByRepresentativePhone(phoneEncryptor.encryptForSearch(normalizedPhone))
@@ -138,15 +161,36 @@ public class AuthService {
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
     }
 
+    /**
+     * 입력된 휴대폰 번호로 이미 가입된 회원이 있는지 확인합니다.
+     * 암호화 검색이 지원되도록 번호를 암호화한 뒤 DB를 조회합니다.
+     *
+     * @param phone 검사할 휴대폰 번호
+     * @return 회원 존재 여부 (존재하면 true)
+     */
     public boolean checkPhoneExists(String phone) {
         return userRepository.existsByRepresentativePhone(
                 phoneEncryptor.encryptForSearch(ValidationUtils.normalizePhone(phone)));
     }
 
+    /**
+     * 입력된 사용자 아이디(username)가 이미 존재하는지 확인합니다.
+     *
+     * @param username 검사할 사용자 아이디
+     * @return 중복 여부 (존재하면 true)
+     */
     public boolean checkUsernameExists(String username) {
         return userRepository.existsByUsername(username);
     }
 
+    /**
+     * 사용자 아이디와 휴대폰 번호가 일치하는 계정이 존재하는지 확인합니다.
+     * 비밀번호 재설정 전 본인 확인용 등으로 사용됩니다.
+     *
+     * @param username 검증할 사용자 아이디
+     * @param phone 검증할 휴대폰 번호
+     * @return 일치하는 계정 존재 여부 (존재 시 true)
+     */
     public boolean checkUserAndPhoneExists(String username, String phone) {
         String cleanInputPhone = ValidationUtils.normalizePhone(phone);
         return userRepository.findByUsername(username)
@@ -155,6 +199,15 @@ public class AuthService {
                 .orElse(false);
     }
 
+    /**
+     * 대상 사용자의 정보를 검증한 후 새로운 비밀번호로 변경(재설정)합니다.
+     * 아이디와 휴대폰 번호가 모두 일치해야 하며, 새 비밀번호의 복잡성 검증을 필수적으로 거칩니다.
+     *
+     * @param username 대상 사용자 아이디
+     * @param phone 해당 사용자의 등록된 휴대폰 번호 (본인 인증 용도)
+     * @param newPassword 변경할 새로운 비밀번호
+     * @throws NotFoundException 계정 정보가 일치하지 않거나 존재하지 않을 경우
+     */
     public void resetPassword(String username, String phone, String newPassword) {
         String cleanInputPhone = ValidationUtils.normalizePhone(phone);
         User user = userRepository.findByUsername(username)

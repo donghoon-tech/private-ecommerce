@@ -28,22 +28,50 @@ public class ProductService {
         private final BusinessProfileRepository businessProfileRepository;
         private final ProductMapper productMapper;
 
-        public List<ProductDTO> getAllProducts() {
+        /**
+     * 시스템에 등록된 전체 상품 목록을 조회합니다.
+     * 상품 이미지와 판매자 프로필 정보를 모아서 한 번에 조회(Batch Fetching)하여 N+1 성능 지연을 회피합니다.
+     *
+     * @return 전체 상품 DTO 리스트
+     */
+    public List<ProductDTO> getAllProducts() {
                 List<Product> products = productRepository.searchProducts(null, null, null);
                 return toProductDTOs(products);
         }
 
-        public List<ProductDTO> getProductsBySeller(UUID sellerId) {
+        /**
+     * 특정 판매자가 등록한 상품 목록을 반환합니다.
+     *
+     * @param sellerId 대상 판매자의 식별자(UUID)
+     * @return 대상 판매자의 상품 DTO 리스트
+     */
+    public List<ProductDTO> getProductsBySeller(UUID sellerId) {
                 List<Product> products = productRepository.findBySellerId(sellerId);
                 return toProductDTOs(products);
         }
 
-        public List<ProductDTO> searchProducts(UUID categoryId, String itemCondition, String itemName) {
+        /**
+     * 지정된 조건에 부합하는 상품을 검색하여 반환합니다.
+     *
+     * @param categoryId 필터링할 카테고리 ID (null 허용)
+     * @param itemCondition 상품 상태 조건 (null 허용)
+     * @param itemName 검색할 상품명 키워드 (null 허용)
+     * @return 검색된 상품 DTO 리스트
+     */
+    public List<ProductDTO> searchProducts(UUID categoryId, String itemCondition, String itemName) {
                 List<Product> products = productRepository.searchProducts(categoryId, itemCondition, itemName);
                 return toProductDTOs(products);
         }
 
-        public ProductDTO getProductById(UUID id) {
+        /**
+     * 상품 ID를 통해 단일 상품에 대한 상세 정보를 반환합니다.
+     * 예외적으로 이 메서드도 내부적으로 다중 이미지 및 판매자 프로필 정보를 묶어 매핑하여 반환에 이용합니다.
+     *
+     * @param id 상세 정보를 확인할 상품의 식별자(UUID)
+     * @return 상품 상세 내역 정보 DTO
+     * @throws RuntimeException 매칭되는 상품이 없을 경우
+     */
+    public ProductDTO getProductById(UUID id) {
                 Product product = productRepository.findWithDetailsById(id)
                                 .orElseThrow(() -> new RuntimeException("Product not found"));
                 return toProductDTOs(List.of(product)).get(0);

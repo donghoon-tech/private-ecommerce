@@ -16,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -31,6 +33,13 @@ public class CartService {
     private final ProductImageRepository productImageRepository;
     private final BusinessProfileRepository businessProfileRepository;
 
+    /**
+     * 사용자의 장바구니 목록을 조회합니다.
+     * 상품 이미지 및 판매자 정보를 일괄 조회(Batch Fetching)하여 N+1 문제를 완화하는 최적화가 적용되어 있습니다.
+     *
+     * @param username 장바구니를 조회할 사용자 식별자
+     * @return 장바구니 상품 정보 목록
+     */
     @Transactional(readOnly = true)
     public List<CartDTO> getUserCart(String username) {
         User user = userRepository.findByUsername(username)
@@ -39,7 +48,7 @@ public class CartService {
         List<CartItem> cartItems = cartItemRepository.findByUserId(user.getId());
         
         List<UUID> productIds = cartItems.stream().map(c -> c.getProduct().getId()).collect(Collectors.toList());
-        java.util.Map<UUID, String> productImagesMap = new java.util.HashMap<>();
+        Map<UUID, String> productImagesMap = new HashMap<>();
         if (!productIds.isEmpty()) {
             List<ProductImage> images = productImageRepository.findByProductIdIn(productIds);
             for (ProductImage image : images) {
@@ -50,7 +59,7 @@ public class CartService {
         }
         
         List<UUID> sellerIds = cartItems.stream().map(c -> c.getProduct().getSeller().getId()).distinct().collect(Collectors.toList());
-        java.util.Map<UUID, String> sellerNameMap = new java.util.HashMap<>();
+        Map<UUID, String> sellerNameMap = new HashMap<>();
         if (!sellerIds.isEmpty()) {
             List<BusinessProfile> profiles = businessProfileRepository.findByUserIdIn(sellerIds);
             for (BusinessProfile profile : profiles) {
@@ -78,6 +87,14 @@ public class CartService {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 장바구니에 새로운 상품을 추가합니다.
+     * 장바구니에 이미 동일한 상품이 존재하는 경우, 새로운 항목을 생성하지 않고 기존 항목의 수량을 추가합니다.
+     *
+     * @param username 상품을 추가할 사용자 식별자
+     * @param request 장바구니 추가 요청 정보 (대상 상품 ID 및 수량)
+     * @return 추가 또는 변경 처리된 장바구니 항목의 상세 정보
+     */
     @Transactional
     public CartDTO addToCart(String username, CartRequest request) {
         User user = userRepository.findByUsername(username)
@@ -114,7 +131,7 @@ public class CartService {
                 break;
             }
         }
-        
+
         return CartDTO.builder()
             .id(cartItem.getId())
             .productId(product.getId())
@@ -127,6 +144,16 @@ public class CartService {
             .build();
     }
 
+    /**
+     * 장바구니 내 특정 상품의 수량을 변경합니다.
+     * 변경 요청된 수량이 0 이하인 경우, 해당 장바구니 항목을 삭제 처리하는 특이사항이 있습니다.
+     * 본인의 장바구니 항목인지에 대한 권한 검증을 수행합니다.
+     *
+     * @param username 권한 검증에 사용될 요청 사용자 식별자
+     * @param cartItemId 수량을 변경할 장바구니 항목 ID
+     * @param quantity 변경할 수량
+     * @throws IllegalArgumentException 항목을 찾을 수 없거나 대상 항목의 소유자가 아닌 경우
+     */
     @Transactional
     public void updateCartQuantity(String username, UUID cartItemId, int quantity) {
         User user = userRepository.findByUsername(username)
@@ -147,6 +174,14 @@ public class CartService {
         }
     }
 
+    /**
+     * 장바구니에서 특정 항목을 삭제합니다.
+     * 본인의 장바구니 항목인지에 대한 권한 검증을 수행합니다.
+     *
+     * @param username 권한 검증에 사용될 요청 사용자 식별자
+     * @param cartItemId 삭제할 장바구니 항목 ID
+     * @throws IllegalArgumentException 항목을 찾을 수 없거나 대상 항목의 소유자가 아닌 경우
+     */
     @Transactional
     public void removeFromCart(String username, UUID cartItemId) {
         User user = userRepository.findByUsername(username)
@@ -162,6 +197,11 @@ public class CartService {
         cartItemRepository.delete(cartItem);
     }
 
+    /**
+     * 사용자의 장바구니에 있는 모든 항목을 일괄 삭제(비우기)합니다.
+     *
+     * @param username 전체 삭제할 장바구니 소유자의 사용자 식별자
+     */
     @Transactional
     public void clearCart(String username) {
         User user = userRepository.findByUsername(username)

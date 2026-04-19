@@ -40,4 +40,8 @@ public class Program extends BaseEntity {
     @Column(nullable = false, length = 20)
     private ProgramType type;
 
+    @Column(name = "is_public", nullable = false)
+    @Builder.Default
+    private boolean isPublic = false;
+
 }

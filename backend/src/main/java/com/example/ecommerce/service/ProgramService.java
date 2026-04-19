@@ -20,13 +20,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProgramService {
 
+    @lombok.Value
+    public static class ProgramCacheInfo {
+        String programCode;
+        boolean isPublic;
+    }
+
     private final ProgramRepository programRepository;
     private final ProgramMapper programMapper;
     
     // URL 패턴별 필요한 ProgramCode를 저장하는 캐시
     // Key: "METHOD /url/path" (예: "GET /api/products")
     // TODO: 서버 다중화 시 데이터 정합성을 위해 Redis Pub/Sub 또는 공유 저장소(Redis) 기반으로 전환 필요
-    private final Map<String, String> urlProgramMap = new ConcurrentHashMap<>();
+    private final Map<String, ProgramCacheInfo> urlProgramMap = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -41,13 +47,13 @@ public class ProgramService {
             if (program.getUrl() != null && !program.getUrl().isEmpty()) {
                 String method = program.getHttpMethod() != null ? program.getHttpMethod().toUpperCase() : "ANY";
                 String key = method + " " + program.getUrl();
-                urlProgramMap.put(key, program.getProgramCode());
+                urlProgramMap.put(key, new ProgramCacheInfo(program.getProgramCode(), program.isPublic()));
             }
         }
         log.info("Loaded {} program URL mappings into cache", urlProgramMap.size());
     }
 
-    public Map<String, String> getUrlProgramMap() {
+    public Map<String, ProgramCacheInfo> getUrlProgramMap() {
         return urlProgramMap;
     }
     

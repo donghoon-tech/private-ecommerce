@@ -21,6 +21,13 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", e.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException e) {
+        log.warn("Access denied: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", "접근 권한이 없습니다."));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException e) {
         log.error("Unhandled runtime exception: {}", e.getMessage(), e);

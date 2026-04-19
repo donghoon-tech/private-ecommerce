@@ -13,7 +13,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN') or hasRole('DEVELOPER') or hasAuthority('PG_MKT_LIST')")
 public class ProductController {
     private final ProductService productService;
 

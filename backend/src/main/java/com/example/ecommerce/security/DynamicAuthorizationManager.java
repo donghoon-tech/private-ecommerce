@@ -31,34 +31,45 @@ public class DynamicAuthorizationManager implements AuthorizationManager<Request
         String requestMethod = request.getMethod().toUpperCase();
 
         // 1. 요청된 URL에 매핑된 프로그램 코드 찾기
-        Optional<String> requiredProgramCode = findRequiredProgramCode(requestMethod, requestPath);
+        Optional<ProgramService.ProgramCacheInfo> programInfo = findRequiredProgram(requestMethod, requestPath);
 
         // 2. 매핑된 프로그램 코드가 없다면 기본적으로 허용 (또는 정책에 따라 거부)
         // 여기서는 명시되지 않은 API는 인증된 사용자라면 허용하는 방식으로 설정
-        if (requiredProgramCode.isEmpty()) {
-            return new AuthorizationDecision(authentication.get().isAuthenticated());
+        if (programInfo.isEmpty()) {
+            return new AuthorizationDecision(authentication.get() != null && authentication.get().isAuthenticated());
         }
 
-        String programCode = requiredProgramCode.get();
+        ProgramService.ProgramCacheInfo info = programInfo.get();
+
+        // [추가] 공개 프로그램(isPublic = true)인 경우 인증 여부와 관계없이 허용
+        if (info.isPublic()) {
+            return new AuthorizationDecision(true);
+        }
         
         // 3. 사용자가 해당 프로그램 권한을 가졌는지 확인
-        boolean hasPermission = authentication.get().getAuthorities().stream()
+        // 익명 사용자는 authentication.get()이 null이거나 isAuthenticated()가 false일 수 있음
+        Authentication auth = authentication.get();
+        if (auth == null || !auth.isAuthenticated()) {
+            return new AuthorizationDecision(false);
+        }
+
+        boolean hasPermission = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> auth.equals(programCode) || auth.equals("ROLE_ADMIN") || auth.equals("ROLE_DEVELOPER"));
+                .anyMatch(a -> a.equals(info.getProgramCode()) || a.equals("ROLE_ADMIN") || a.equals("ROLE_DEVELOPER"));
 
         if (!hasPermission) {
             log.warn("Access Denied for user {} on {} {}. Required: {}", 
-                authentication.get().getName(), requestMethod, requestPath, programCode);
+                auth.getName(), requestMethod, requestPath, info.getProgramCode());
         }
 
         return new AuthorizationDecision(hasPermission);
     }
 
-    private Optional<String> findRequiredProgramCode(String method, String path) {
-        Map<String, String> map = programService.getUrlProgramMap();
+    private Optional<ProgramService.ProgramCacheInfo> findRequiredProgram(String method, String path) {
+        Map<String, ProgramService.ProgramCacheInfo> map = programService.getUrlProgramMap();
         
         // 정확히 일치하는 패턴 검색 (Method + Path)
-        for (Map.Entry<String, String> entry : map.entrySet()) {
+        for (Map.Entry<String, ProgramService.ProgramCacheInfo> entry : map.entrySet()) {
             String[] parts = entry.getKey().split(" ");
             if (parts.length < 2) continue;
             

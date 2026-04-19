@@ -48,12 +48,12 @@ public class MenuService {
         final Set<UUID> finalProgramIds = userProgramIds;
         List<Menu> filteredMenus = allMenus.stream()
                 .filter(m -> Boolean.TRUE.equals(m.getIsVisible()))
-                .filter(m -> m.getProgram() == null || finalProgramIds.contains(m.getProgram().getId()))
+                .filter(m -> m.getProgram() == null || m.getProgram().isPublic() || finalProgramIds.contains(m.getProgram().getId()))
                 .collect(Collectors.toList());
 
         // Build tree from filtered list
-        List<MenuDTO> tree = buildTree(filteredMenus, username != null ? finalProgramIds : null);
-        return tree;
+        List<MenuDTO> tree = buildTree(filteredMenus, null); 
+        return pruneEmptyNodes(tree);
     }
 
     private List<MenuDTO> buildTree(List<Menu> allMenus, Set<UUID> userProgramIds) {
@@ -78,11 +78,6 @@ public class MenuService {
             }
         }
 
-        // If filtering by programs, we need to prune branches with no leaves
-        if (userProgramIds != null) {
-            return pruneEmptyNodes(roots);
-        }
-
         return roots;
     }
 
@@ -97,10 +92,15 @@ public class MenuService {
                     result.add(node);
                 }
             } else {
-                // 리프 노드: 필터(getUserMenuTree)를 이미 통과했으므로 무조건 포함.
-                // programId가 없는 리프 = 권한 제한 없는 공개 메뉴 → 포함해야 함.
-                // programId가 있는 리프 = 이미 상위 필터에서 사용자 권한 확인 완료.
-                result.add(node);
+                // 리프 노드 (혹은 자식이 다 잘려나간 부모)
+                // 1. 연결된 프로그램이 있다면 권한 검증을 통과한 것이므로 유지
+                if (node.getProgramId() != null) {
+                    result.add(node);
+                } 
+                // 2. 연결된 프로그램이 없다면, URL이 유효한 경로(공개 메뉴)일 때만 유지
+                else if (node.getPath() != null && !node.getPath().equals("#") && !node.getPath().isBlank()) {
+                    result.add(node);
+                }
             }
         }
         return result;

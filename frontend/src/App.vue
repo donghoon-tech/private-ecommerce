@@ -49,63 +49,45 @@ const toggleDropdown = (id: string | null) => {
            <router-link to="/" class="text-2xl font-bold text-indigo-600">가설라인</router-link>
            
            <!-- Dynamic Nested Menus -->
-           <template v-if="authStore.isLoggedIn">
-             <div 
-               v-for="menu in menuStore.userMenus" 
-               :key="menu.id" 
-               class="relative group"
-               @mouseenter="toggleDropdown(menu.id)"
-               @mouseleave="toggleDropdown(null)"
+           <div 
+             v-for="menu in menuStore.userMenus" 
+             :key="menu.id" 
+             class="relative group"
+             @mouseenter="toggleDropdown(menu.id)"
+             @mouseleave="toggleDropdown(null)"
+           >
+             <!-- Single Link (No Submenus) -->
+             <router-link 
+               v-if="!menu.children || menu.children.length === 0"
+               :to="menu.path || '#'"
+               class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center"
              >
-               <!-- Single Link (No Submenus) -->
-               <router-link 
-                 v-if="!menu.children || menu.children.length === 0"
-                 :to="menu.path || '#'"
-                 class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center"
-               >
-                 {{ menu.name }}
-               </router-link>
+               {{ menu.name }}
+             </router-link>
 
-               <!-- Dropdown Parent -->
-               <div v-else>
-                 <span class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center cursor-pointer">
-                   {{ menu.name }}
-                   <svg class="ml-1 w-4 h-4 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                 </span>
-                 
-                 <!-- Submenus -->
-                 <div 
-                   v-show="activeDropdown === menu.id"
-                   class="absolute left-0 mt-0 w-48 bg-white border border-gray-100 shadow-xl rounded-md py-2 transition-all duration-200 z-50"
+             <!-- Dropdown Parent -->
+             <div v-else>
+               <span class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center cursor-pointer">
+                 {{ menu.name }}
+                 <svg class="ml-1 w-4 h-4 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+               </span>
+               
+               <!-- Submenus -->
+               <div 
+                 v-show="activeDropdown === menu.id"
+                 class="absolute left-0 mt-0 w-48 bg-white border border-gray-100 shadow-xl rounded-md py-2 transition-all duration-200 z-50"
+               >
+                 <router-link 
+                   v-for="child in menu.children" 
+                   :key="child.id" 
+                   :to="child.path || '#'"
+                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
                  >
-                   <router-link 
-                     v-for="child in menu.children" 
-                     :key="child.id" 
-                     :to="child.path || '#'"
-                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
-                   >
-                     {{ child.name }}
-                   </router-link>
-                 </div>
+                   {{ child.name }}
+                 </router-link>
                </div>
              </div>
-           </template>
-
-            <template v-else>
-              <!-- 비로그인 상태에서는 DB에서 '연결 프로그램'이 없는 공개 메뉴들이 userMenus에 담겨 나옵니다. -->
-              <div 
-                v-for="menu in menuStore.userMenus" 
-                :key="menu.id" 
-                class="relative group"
-              >
-                <router-link 
-                  :to="menu.path || '#'"
-                  class="text-gray-600 hover:text-indigo-600 font-semibold transition py-2 flex items-center"
-                >
-                  {{ menu.name }}
-                </router-link>
-              </div>
-            </template>
+           </div>
          </div>
 
          <div class="flex items-center space-x-6">

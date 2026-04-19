@@ -28,14 +28,18 @@ const router = createRouter({
             name: 'register',
             component: () => import('../views/RegisterView.vue')
         },
-
-        // ── 로그인 필요 (programCode 제어는 DB에서 동적으로) ─────────────────
         {
             path: '/',
-            name: 'home',
-            component: HomeView,
-            meta: { requiresAuth: true }
+            redirect: '/market/product/list'
         },
+        {
+            path: '/market/product/list',
+            name: 'product-list',
+            component: HomeView
+            // meta: { requiresAuth: true } 속성을 제거하여 전체 공개 접근을 허용합니다. DB의 isPublic=true와 매칭됨
+        },
+
+        // ── 로그인 필요 (programCode 제어는 DB에서 동적으로) ─────────────────
         {
             path: '/mypage',
             name: 'mypage',

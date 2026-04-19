@@ -4,11 +4,13 @@ import { onMounted, ref, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useMenuStore } from './stores/menu'
 import { useRecentStore } from './stores/recent'
+import { useWishlistStore } from './stores/wishlist'
 import api from './utils/api'
 
 const authStore = useAuthStore()
 const menuStore = useMenuStore()
 const recentStore = useRecentStore()
+const wishlistStore = useWishlistStore()
 const activeDropdown = ref<string | null>(null)
 
 const handleLogout = async () => {
@@ -27,6 +29,7 @@ const handleLogout = async () => {
 
 watch(() => authStore.isLoggedIn, () => {
   menuStore.fetchMenus()
+  wishlistStore.fetchWishlists()
 })
 
 watch(() => authStore.permissions, () => {
@@ -36,6 +39,7 @@ watch(() => authStore.permissions, () => {
 onMounted(async () => {
   await authStore.initAuth()
   menuStore.fetchMenus()
+  wishlistStore.fetchWishlists()
 })
 
 const toggleDropdown = (id: string | null) => {
@@ -103,7 +107,7 @@ const toggleDropdown = (id: string | null) => {
              <!-- Wishlist -->
              <router-link to="/wishlist" class="relative text-gray-600 hover:text-indigo-600 transition flex items-center group">
                <svg class="w-[1.4rem] h-[1.4rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-               <span class="absolute -top-1.5 -right-2 bg-red-500 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">0</span>
+               <span v-if="wishlistStore.items.length > 0" class="absolute -top-1.5 -right-2 bg-red-500 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">{{ wishlistStore.items.length }}</span>
                <span class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">찜한상품</span>
              </router-link>
              <!-- Cart -->

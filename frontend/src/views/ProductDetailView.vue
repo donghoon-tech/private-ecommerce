@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCartSeller, getCartItemCount, addToCart as addToCartUtil, clearCart, type CartItem } from '../utils/cart'
 import { useRecentStore } from '../stores/recent'
+import { useWishlistStore } from '../stores/wishlist'
 
 interface Product {
   id: string
@@ -176,6 +177,18 @@ const goToCart = () => {
 const buyNow = () => {
     alert(`주문 작성을 시작합니다.`)
 }
+
+// Wishlist Logic
+const wishlistStore = useWishlistStore()
+const isWishlisted = computed(() => {
+    return product.value ? wishlistStore.isWishlisted(product.value.id) : false
+})
+
+const toggleWishlist = async () => {
+    if (product.value) {
+        await wishlistStore.toggleWishlist(product.value.id)
+    }
+}
 </script>
 
 <template>
@@ -243,12 +256,21 @@ const buyNow = () => {
 
             <!-- Right: Product Info & Actions (Span 2) -->
             <div class="lg:col-span-2 w-full flex flex-col h-full">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col">
-                    <div class="flex justify-between items-start mb-2">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col relative">
+                    <div class="flex justify-between items-start mb-2 pr-10">
                         <span class="text-indigo-600 font-bold text-sm tracking-wide">{{ product.sellerName }}</span>
                     </div>
                     
-                    <h1 class="text-2xl font-bold text-gray-900 mb-4 leading-tight">{{ product.itemName }}</h1>
+                    <!-- Wishlist Toggle Button -->
+                    <button 
+                      @click="toggleWishlist" 
+                      class="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                      :class="isWishlisted ? 'text-red-500' : 'text-gray-300 hover:text-red-400'"
+                    >
+                      <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </button>
+                    
+                    <h1 class="text-2xl font-bold text-gray-900 mb-4 leading-tight pr-10">{{ product.itemName }}</h1>
                     
                     <div class="flex items-end gap-2 mb-6 border-b border-gray-100 pb-6">
                         <span class="text-3xl font-bold text-gray-900">{{ product.unitPrice.toLocaleString() }}</span>

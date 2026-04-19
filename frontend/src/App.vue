@@ -3,10 +3,12 @@ import { RouterView } from 'vue-router'
 import { onMounted, ref, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useMenuStore } from './stores/menu'
+import { useRecentStore } from './stores/recent'
 import api from './utils/api'
 
 const authStore = useAuthStore()
 const menuStore = useMenuStore()
+const recentStore = useRecentStore()
 const activeDropdown = ref<string | null>(null)
 
 const handleLogout = async () => {
@@ -95,7 +97,7 @@ const toggleDropdown = (id: string | null) => {
              <!-- Recent -->
              <router-link to="/recent" class="relative text-gray-600 hover:text-indigo-600 transition flex items-center group">
                <svg class="w-[1.4rem] h-[1.4rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-               <span class="absolute -top-1.5 -right-2 bg-gray-500 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">0</span>
+               <span v-if="recentStore.items.length > 0" class="absolute -top-1.5 -right-2 bg-gray-500 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">{{ recentStore.items.length }}</span>
                <span class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">최근본상품</span>
              </router-link>
              <!-- Wishlist -->

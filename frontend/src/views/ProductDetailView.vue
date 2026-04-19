@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCartSeller, getCartItemCount, addToCart as addToCartUtil, clearCart, type CartItem } from '../utils/cart'
+import { useRecentStore } from '../stores/recent'
 
 interface Product {
   id: string
@@ -124,6 +125,15 @@ onMounted(async () => {
     
     // Check cart status
     checkCartStatus()
+    
+    // Save to recently viewed
+    if (product.value) {
+        const recentStore = useRecentStore()
+        const imgParams = product.value.imageUrls && product.value.imageUrls.length > 0
+            ? product.value.imageUrls[0]
+            : `https://picsum.photos/600/600?random=${product.value.id.charCodeAt(product.value.id.length - 1)}`
+        recentStore.addRecent(product.value, imgParams)
+    }
 })
 
 const decreaseQty = () => { if (quantity.value > 1) quantity.value-- }

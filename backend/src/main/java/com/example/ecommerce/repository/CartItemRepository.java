@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"product", "product.seller"})
     List<CartItem> findByUserId(UUID userId);
 
     Optional<CartItem> findByUserIdAndProductId(UUID userId, UUID productId);

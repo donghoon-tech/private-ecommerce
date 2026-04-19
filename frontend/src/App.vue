@@ -5,12 +5,14 @@ import { useAuthStore } from './stores/auth'
 import { useMenuStore } from './stores/menu'
 import { useRecentStore } from './stores/recent'
 import { useWishlistStore } from './stores/wishlist'
+import { useCartStore } from './stores/cart'
 import api from './utils/api'
 
 const authStore = useAuthStore()
 const menuStore = useMenuStore()
 const recentStore = useRecentStore()
 const wishlistStore = useWishlistStore()
+const cartStore = useCartStore()
 const activeDropdown = ref<string | null>(null)
 
 const handleLogout = async () => {
@@ -30,6 +32,7 @@ const handleLogout = async () => {
 watch(() => authStore.isLoggedIn, () => {
   menuStore.fetchMenus()
   wishlistStore.fetchWishlists()
+  cartStore.fetchCart()
 })
 
 watch(() => authStore.permissions, () => {
@@ -40,6 +43,7 @@ onMounted(async () => {
   await authStore.initAuth()
   menuStore.fetchMenus()
   wishlistStore.fetchWishlists()
+  cartStore.fetchCart()
 })
 
 const toggleDropdown = (id: string | null) => {
@@ -113,7 +117,7 @@ const toggleDropdown = (id: string | null) => {
              <!-- Cart -->
              <router-link to="/cart" class="relative text-gray-600 hover:text-indigo-600 transition flex items-center group">
                <svg class="w-[1.4rem] h-[1.4rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-               <span class="absolute -top-1.5 -right-2 bg-indigo-600 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">0</span>
+               <span v-if="cartStore.totalCount > 0" class="absolute -top-1.5 -right-2 bg-indigo-600 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">{{ cartStore.totalCount }}</span>
                <span class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">장바구니</span>
              </router-link>
            </div>

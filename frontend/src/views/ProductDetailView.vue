@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCartSeller, getCartItemCount, addToCart as addToCartUtil, clearCart, type CartItem } from '../utils/cart'
+import { useCartStore } from '../stores/cart'
 import { useRecentStore } from '../stores/recent'
 import { useWishlistStore } from '../stores/wishlist'
 
@@ -22,9 +22,17 @@ const product = ref<Product | null>(null)
 const selectedImageIndex = ref(0)
 const quantity = ref(1)
 
+// Cart & Wishlist Stores
+const cartStore = useCartStore()
+const wishlistStore = useWishlistStore()
+
 // Cart conflict detection
-const currentCartSeller = ref<string | null>(null)
-const currentCartItemCount = ref(0)
+const currentCartSeller = computed(() => {
+    return cartStore.items.length > 0 ? cartStore.items[0].sellerName : null
+})
+const currentCartItemCount = computed(() => {
+    return cartStore.items.reduce((sum, item) => sum + item.quantity, 0)
+})
 const hasCartConflict = computed(() => {
     if (!product.value || !currentCartSeller.value) return false
     return currentCartSeller.value !== product.value.sellerName
@@ -72,16 +80,9 @@ const sellerProducts = ref([
 
 const mockSellers = ['건설자재총판', '대한철강', '안전제일자재', '현대건설자재', 'K-스틸']
 
-// Helper to get seller based on product ID
 const getSellerForProduct = (productId: string) => {
     const numericId = parseInt(productId.replace(/\D/g, '')) || 0
     return mockSellers[numericId % mockSellers.length]
-}
-
-// Check cart status
-const checkCartStatus = () => {
-    currentCartSeller.value = getCartSeller()
-    currentCartItemCount.value = getCartItemCount()
 }
 
 onMounted(async () => {
@@ -121,11 +122,10 @@ onMounted(async () => {
             sellerName: getSellerForProduct(mockId),
         }
     }
-    // ensure index is valid
-    selectedImageIndex.value = 0
-    
-    // Check cart status
-    checkCartStatus()
+    // Wait for cart fetch if not initialized
+    if (!cartStore.initialized) {
+        await cartStore.fetchCart()
+    }
     
     // Save to recently viewed
     if (product.value) {
@@ -145,29 +145,19 @@ const totalPrice = computed(() => {
 })
 
 // Cart Actions
-const addToCart = () => {
+const addToCart = async () => {
     if (!product.value) return
-    
-    const cartItem: CartItem = {
-        productId: product.value.id,
-        productName: product.value.itemName,
-        productSlug: product.value.slug,
-        seller: product.value.sellerName || '',
-        price: product.value.unitPrice,
-        quantity: quantity.value,
-        thumbnailUrl: product.value.imageUrls && product.value.imageUrls.length > 0 ? product.value.imageUrls[0] : ''
+    const success = await cartStore.addToCart(product.value.id, quantity.value)
+    if (success) {
+        alert(`${product.value.itemName} ${quantity.value}개를 장바구니에 담았습니다.`)
     }
-    
-    addToCartUtil(cartItem)
-    checkCartStatus()
-    alert(`${product.value.itemName} ${quantity.value}개를 장바구니에 담았습니다.`)
 }
 
-const clearAndAddToCart = () => {
+const clearAndAddToCart = async () => {
     if (!product.value) return
     
-    clearCart()
-    addToCart()
+    await cartStore.clearCart()
+    await addToCart()
 }
 
 const goToCart = () => {
@@ -179,7 +169,6 @@ const buyNow = () => {
 }
 
 // Wishlist Logic
-const wishlistStore = useWishlistStore()
 const isWishlisted = computed(() => {
     return product.value ? wishlistStore.isWishlisted(product.value.id) : false
 })

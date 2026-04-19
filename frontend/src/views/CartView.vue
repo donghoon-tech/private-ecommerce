@@ -1,56 +1,43 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getCart, removeFromCart, clearCart, saveCart, type CartItem } from '../utils/cart'
+import { useCartStore } from '../stores/cart'
 
 const router = useRouter()
-const cartItems = ref<CartItem[]>([])
-
-const loadCart = () => {
-    cartItems.value = getCart()
-}
+const cartStore = useCartStore()
 
 onMounted(() => {
-    loadCart()
+    cartStore.fetchCart()
 })
 
-const updateQuantity = (productId: string, delta: number) => {
-    const item = cartItems.value.find(i => i.productId === productId)
-    if (item) {
-        item.quantity = Math.max(1, item.quantity + delta)
-        saveCart(cartItems.value)
-        loadCart()
-    }
+const updateQuantity = async (cartItemId: string, delta: number, currentQuantity: number) => {
+    const newQuantity = currentQuantity + delta
+    if (newQuantity < 1) return
+    await cartStore.updateQuantity(cartItemId, newQuantity)
 }
 
-const removeItem = (productId: string) => {
+const removeItem = async (cartItemId: string) => {
     if (confirm('이 상품을 장바구니에서 삭제하시겠습니까?')) {
-        removeFromCart(productId)
-        loadCart()
+        await cartStore.removeFromCart(cartItemId)
     }
 }
 
-const clearAllItems = () => {
+const clearAllItems = async () => {
     if (confirm('장바구니를 전체 비우시겠습니까?')) {
-        clearCart()
-        loadCart()
+        await cartStore.clearCart()
     }
 }
 
 const totalPrice = computed(() => {
-    return cartItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-})
-
-const totalItems = computed(() => {
-    return cartItems.value.reduce((sum, item) => sum + item.quantity, 0)
+    return cartStore.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
 })
 
 const sellerName = computed(() => {
-    return cartItems.value.length > 0 ? cartItems.value[0].seller : ''
+    return cartStore.items.length > 0 ? cartStore.items[0].sellerName : ''
 })
 
 const goToCheckout = () => {
-    if (cartItems.value.length === 0) {
+    if (cartStore.items.length === 0) {
         alert('장바구니에 상품이 없습니다.')
         return
     }
@@ -68,11 +55,11 @@ const goToProduct = (slug: string) => {
             <!-- Header -->
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">장바구니</h1>
-                <p class="text-gray-600">총 <span class="font-bold text-indigo-600">{{ totalItems }}</span>개 상품</p>
+                <p class="text-gray-600">총 <span class="font-bold text-indigo-600">{{ cartStore.totalCount }}</span>개 상품</p>
             </div>
 
             <!-- Empty State -->
-            <div v-if="cartItems.length === 0" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-20 text-center">
+            <div v-if="cartStore.items.length === 0" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-20 text-center">
                 <svg class="w-24 h-24 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
                 </svg>
@@ -99,7 +86,7 @@ const goToProduct = (slug: string) => {
                     </div>
 
                     <!-- Cart Items List -->
-                    <div v-for="item in cartItems" :key="item.productId" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
+                    <div v-for="item in cartStore.items" :key="item.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
                         <div class="flex gap-4">
                             <!-- Thumbnail -->
                             <div 
@@ -107,9 +94,9 @@ const goToProduct = (slug: string) => {
                                 class="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer hover:opacity-75 transition"
                             >
                                 <img 
-                                    v-if="item.thumbnailUrl" 
-                                    :src="item.thumbnailUrl" 
-                                    :alt="item.productName"
+                                    v-if="item.imageUrl" 
+                                    :src="item.imageUrl" 
+                                    :alt="item.itemName"
                                     class="w-full h-full object-cover"
                                 >
                             </div>
@@ -120,34 +107,34 @@ const goToProduct = (slug: string) => {
                                     @click="goToProduct(item.productSlug)"
                                     class="text-lg font-bold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-indigo-600 transition"
                                 >
-                                    {{ item.productName }}
+                                    {{ item.itemName }}
                                 </h3>
-                                <p class="text-sm text-gray-500 mb-3">{{ item.seller }}</p>
+                                <p class="text-sm text-gray-500 mb-3">{{ item.sellerName }}</p>
                                 
                                 <div class="flex items-center justify-between">
                                     <!-- Quantity Control -->
                                     <div class="flex items-center bg-gray-50 border border-gray-300 rounded">
                                         <button 
-                                            @click="updateQuantity(item.productId, -1)"
+                                            @click="updateQuantity(item.id, -1, item.quantity)"
                                             class="px-3 py-1.5 hover:bg-gray-100 text-gray-600 font-bold"
                                         >-</button>
                                         <span class="px-4 py-1.5 text-gray-900 font-bold min-w-[3rem] text-center">{{ item.quantity }}</span>
                                         <button 
-                                            @click="updateQuantity(item.productId, 1)"
+                                            @click="updateQuantity(item.id, 1, item.quantity)"
                                             class="px-3 py-1.5 hover:bg-gray-100 text-gray-600 font-bold"
                                         >+</button>
                                     </div>
 
                                     <!-- Price -->
                                     <div class="text-right">
-                                        <p class="text-xl font-bold text-indigo-600">{{ (item.price * item.quantity).toLocaleString() }}원</p>
+                                        <p class="text-xl font-bold text-indigo-600">{{ (item.unitPrice * item.quantity).toLocaleString() }}원</p>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Remove Button -->
                             <button 
-                                @click="removeItem(item.productId)"
+                                @click="removeItem(item.id)"
                                 class="text-gray-400 hover:text-red-500 transition p-2"
                                 title="삭제"
                             >

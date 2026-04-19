@@ -57,6 +57,17 @@ const router = createRouter({
             component: () => import('../views/CartView.vue')
         },
         {
+            path: '/wishlist',
+            name: 'wishlist',
+            component: () => import('../views/WishlistView.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/recent',
+            name: 'recent',
+            component: () => import('../views/RecentView.vue')
+        },
+        {
             path: '/orders',
             name: 'orders',
             component: () => import('../views/OrderListView.vue'),

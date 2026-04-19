@@ -91,13 +91,34 @@ const toggleDropdown = (id: string | null) => {
          </div>
 
          <div class="flex items-center space-x-6">
+           <div class="flex items-center space-x-5 border-r pr-6 border-gray-300">
+             <!-- Recent -->
+             <router-link to="/recent" class="relative text-gray-600 hover:text-indigo-600 transition flex items-center group">
+               <svg class="w-[1.4rem] h-[1.4rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+               <span class="absolute -top-1.5 -right-2 bg-gray-500 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">0</span>
+               <span class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">최근본상품</span>
+             </router-link>
+             <!-- Wishlist -->
+             <router-link to="/wishlist" class="relative text-gray-600 hover:text-indigo-600 transition flex items-center group">
+               <svg class="w-[1.4rem] h-[1.4rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+               <span class="absolute -top-1.5 -right-2 bg-red-500 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">0</span>
+               <span class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">찜한상품</span>
+             </router-link>
+             <!-- Cart -->
+             <router-link to="/cart" class="relative text-gray-600 hover:text-indigo-600 transition flex items-center group">
+               <svg class="w-[1.4rem] h-[1.4rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+               <span class="absolute -top-1.5 -right-2 bg-indigo-600 text-white font-bold rounded-full w-4 h-4 flex items-center justify-center" style="font-size: 0.6rem;">0</span>
+               <span class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">장바구니</span>
+             </router-link>
+           </div>
+
            <template v-if="!authStore.isLoggedIn">
-             <router-link to="/login" class="text-gray-600 hover:text-indigo-600 font-medium transition">로그인</router-link>
+             <router-link to="/login" class="text-gray-600 hover:text-indigo-600 font-medium transition text-sm">로그인</router-link>
            </template>
            <template v-else>
              <span class="text-sm text-gray-500 hidden sm:inline-block">반갑습니다, <strong>{{ authStore.username }}</strong>님</span>
-             <router-link to="/mypage" class="text-gray-600 hover:text-indigo-600 font-medium transition">마이페이지</router-link>
-             <button @click="handleLogout" class="text-gray-600 hover:text-red-600 font-medium transition">로그아웃</button>
+             <router-link to="/mypage" class="text-gray-600 hover:text-indigo-600 font-medium transition text-sm">마이페이지</router-link>
+             <button @click="handleLogout" class="text-gray-600 hover:text-red-600 font-medium transition text-sm">로그아웃</button>
            </template>
          </div>
        </div>

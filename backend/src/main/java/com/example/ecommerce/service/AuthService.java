@@ -155,26 +155,15 @@ public class AuthService {
                 .orElse(false);
     }
 
-    public String resetPassword(String username, String phone) {
+    public void resetPassword(String username, String phone, String newPassword) {
         String cleanInputPhone = ValidationUtils.normalizePhone(phone);
         User user = userRepository.findByUsername(username)
                 .filter(u -> cleanInputPhone.equals(
                         ValidationUtils.normalizePhone(u.getRepresentativePhone())))
                 .orElseThrow(() -> new NotFoundException(ErrorMessage.AUTH_INFO_MISMATCH));
 
-        String tempPassword = generateRandomPassword();
-        user.setPasswordHash(passwordEncoder.encode(tempPassword));
-        // Dirty Checking
-        return tempPassword;
+        ValidationUtils.validatePassword(newPassword);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
     }
 
-    private String generateRandomPassword() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 8; i++) {
-            int index = (int) (Math.random() * chars.length());
-            sb.append(chars.charAt(index));
-        }
-        return sb.toString();
-    }
 }

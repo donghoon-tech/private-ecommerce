@@ -37,11 +37,13 @@ const PROTECTED_ROLES = ['UNVERIFIED', 'USER', 'ADMIN']
 const checkedAssignedIds = ref<string[]>([])
 const checkedAllIds = ref<string[]>([])
 
-// 필터 상태
-const filterCategory1 = ref('')
-const filterCategory2 = ref('')
-const filterType = ref('')
 const filterKeyword = ref('')
+
+// 부여된 프로그램 필터 상태
+const assignFilterCat1 = ref('')
+const assignFilterCat2 = ref('')
+const assignFilterType = ref('')
+const assignFilterKeyword = ref('')
 
 onMounted(async () => {
   await Promise.all([fetchRoles(), fetchAllPrograms()])
@@ -91,6 +93,17 @@ const unassignedPrograms = computed(() => {
     if (filterType.value && p.type !== filterType.value) return false
     if (filterKeyword.value && !p.name.includes(filterKeyword.value) && !p.programCode.includes(filterKeyword.value)) return false
     
+    return true
+  })
+})
+
+const filteredAssignedPrograms = computed(() => {
+  if (!selectedRole.value) return []
+  return selectedRole.value.programs.filter(p => {
+    if (assignFilterCat1.value && p.category1 !== assignFilterCat1.value) return false
+    if (assignFilterCat2.value && p.category2 !== assignFilterCat2.value) return false
+    if (assignFilterType.value && p.type !== assignFilterType.value) return false
+    if (assignFilterKeyword.value && !p.name.includes(assignFilterKeyword.value) && !p.programCode.includes(assignFilterKeyword.value)) return false
     return true
   })
 })
@@ -225,7 +238,7 @@ const createRole = async () => {
 
 const toggleAllAssigned = (e: any) => {
   if (e.target.checked && selectedRole.value) {
-    checkedAssignedIds.value = selectedRole.value.programs.map(p => p.id)
+    checkedAssignedIds.value = filteredAssignedPrograms.value.map(p => p.id)
   } else {
     checkedAssignedIds.value = []
   }
@@ -332,10 +345,43 @@ const toggleAllUnassigned = (e: any) => {
             
             <!-- 위쪽 표: 부여된 프로그램 -->
             <div class="bg-white rounded-md border border-gray-300 overflow-hidden relative">
-              <div class="p-3 bg-white flex justify-between items-center border-b border-gray-300">
-                <div class="flex items-center gap-3">
+              <div class="p-3 bg-white flex flex-col gap-3 border-b border-gray-300">
+                <div class="flex justify-between items-center">
                   <h2 class="font-bold text-blue-600">부여된 프로그램 목록</h2>
-                  <button @click="removeSelectedPrograms" :disabled="checkedAssignedIds.length === 0" class="px-3 py-1 bg-red-600 disabled:bg-red-300 text-white rounded text-xs hover:bg-red-700 transition">선택삭제</button>
+                </div>
+                <!-- Filter Bar -->
+                <div class="flex items-center justify-between text-xs px-2 mb-2">
+                  <button @click="removeSelectedPrograms" :disabled="checkedAssignedIds.length === 0" class="px-4 py-1.5 bg-red-700 disabled:bg-red-300 text-white rounded font-bold hover:bg-red-800 transition">선택삭제</button>
+                  
+                  <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">대분류</span>
+                      <select v-model="assignFilterCat1" class="border border-gray-300 rounded p-1 w-24">
+                        <option value="">전체보기</option>
+                        <option v-for="cat in uniqueCategories1" :key="cat" :value="cat">{{ cat }}</option>
+                      </select>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">중분류</span>
+                      <select v-model="assignFilterCat2" class="border border-gray-300 rounded p-1 w-24">
+                        <option value="">전체보기</option>
+                        <option v-for="cat in uniqueCategories2" :key="cat" :value="cat">{{ cat }}</option>
+                      </select>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">유형</span>
+                      <select v-model="assignFilterType" class="border border-gray-300 rounded p-1 w-24">
+                        <option value="">전체보기</option>
+                        <option value="WEB">WEB</option>
+                        <option value="API">API</option>
+                      </select>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">프로그램명</span>
+                      <input v-model="assignFilterKeyword" class="border border-gray-300 rounded p-1 w-32" placeholder="검색" />
+                    </div>
+                    <button class="px-3 py-1.5 bg-[#1e293b] text-white rounded hover:bg-slate-700 transition font-medium">조회</button>
+                  </div>
                 </div>
               </div>
               
@@ -352,10 +398,10 @@ const toggleAllUnassigned = (e: any) => {
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100">
-                    <tr v-if="selectedRole.programs.length === 0">
+                    <tr v-if="filteredAssignedPrograms.length === 0">
                       <td colspan="6" class="py-8 text-gray-400">부여된 프로그램이 없습니다.</td>
                     </tr>
-                    <tr v-for="prog in selectedRole.programs" :key="prog.id" class="hover:bg-gray-50">
+                    <tr v-for="prog in filteredAssignedPrograms" :key="prog.id" class="hover:bg-gray-50">
                       <td class="py-2"><input type="checkbox" :value="prog.id" v-model="checkedAssignedIds" /></td>
                       <td class="py-2">{{ prog.category1 || '-' }}</td>
                       <td class="py-2">{{ prog.category2 || '-' }}</td>
@@ -371,39 +417,43 @@ const toggleAllUnassigned = (e: any) => {
             </div>
 
             <!-- 아래쪽 표: 전체 프로그램 목록 -->
-            <div class="bg-white rounded-md border border-gray-300 overflow-hidden relative">
+            <div class="bg-white rounded-md border border-gray-300 overflow-hidden relative mt-2">
               <div class="p-3 bg-white flex flex-col gap-3 border-b border-gray-300">
                 <div class="flex justify-between items-center">
                   <h2 class="font-bold text-blue-600">전체 프로그램 목록</h2>
-                  <button @click="assignSelectedPrograms" :disabled="checkedAllIds.length === 0" class="px-3 py-1 bg-blue-800 disabled:bg-blue-300 text-white rounded text-xs hover:bg-blue-900 transition">선택부여</button>
                 </div>
                 <!-- Filter Bar -->
-                <div class="flex items-center gap-2 text-xs bg-gray-50 p-2 rounded">
-                  <div class="flex items-center gap-1">
-                    <span class="text-gray-600 font-bold">대분류</span>
-                    <select v-model="filterCategory1" class="border border-gray-300 rounded p-1 w-24">
-                      <option value="">전체보기</option>
-                      <option v-for="cat in uniqueCategories1" :key="cat" :value="cat">{{ cat }}</option>
-                    </select>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <span class="text-gray-600 font-bold">중분류</span>
-                    <select v-model="filterCategory2" class="border border-gray-300 rounded p-1 w-24">
-                      <option value="">전체보기</option>
-                      <option v-for="cat in uniqueCategories2" :key="cat" :value="cat">{{ cat }}</option>
-                    </select>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <span class="text-gray-600 font-bold">유형</span>
-                    <select v-model="filterType" class="border border-gray-300 rounded p-1 w-24">
-                      <option value="">전체보기</option>
-                      <option value="WEB">WEB</option>
-                      <option value="API">API</option>
-                    </select>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <span class="text-gray-600 font-bold">프로그램명</span>
-                    <input v-model="filterKeyword" class="border border-gray-300 rounded p-1 w-32" placeholder="검색" />
+                <div class="flex items-center justify-between text-xs px-2 mb-2">
+                  <button @click="assignSelectedPrograms" :disabled="checkedAllIds.length === 0" class="px-4 py-1.5 bg-blue-700 disabled:bg-blue-300 text-white rounded font-bold hover:bg-blue-800 transition">선택부여</button>
+                  
+                  <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">대분류</span>
+                      <select v-model="filterCategory1" class="border border-gray-300 rounded p-1 w-24">
+                        <option value="">전체보기</option>
+                        <option v-for="cat in uniqueCategories1" :key="cat" :value="cat">{{ cat }}</option>
+                      </select>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">중분류</span>
+                      <select v-model="filterCategory2" class="border border-gray-300 rounded p-1 w-24">
+                        <option value="">전체보기</option>
+                        <option v-for="cat in uniqueCategories2" :key="cat" :value="cat">{{ cat }}</option>
+                      </select>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">유형</span>
+                      <select v-model="filterType" class="border border-gray-300 rounded p-1 w-24">
+                        <option value="">전체보기</option>
+                        <option value="WEB">WEB</option>
+                        <option value="API">API</option>
+                      </select>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-600 font-bold">프로그램명</span>
+                      <input v-model="filterKeyword" class="border border-gray-300 rounded p-1 w-32" placeholder="검색" />
+                    </div>
+                    <button class="px-3 py-1.5 bg-[#1e293b] text-white rounded hover:bg-slate-700 transition font-medium">조회</button>
                   </div>
                 </div>
               </div>

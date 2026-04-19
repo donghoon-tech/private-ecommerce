@@ -7,7 +7,9 @@ const phone = ref('')
 const verificationCode = ref('')
 const isVerificationSent = ref(false)
 const isVerified = ref(false)
-const tempPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const isResetComplete = ref(false)
 const errorMsg = ref('')
 
 // 상태 메시지 추가
@@ -56,21 +58,31 @@ const handleFindPassword = async () => {
         return
     }
 
+    if (!newPassword.value || !confirmPassword.value) {
+        errorMsg.value = '새 비밀번호를 입력해주세요.'
+        return
+    }
+
+    if (newPassword.value !== confirmPassword.value) {
+        errorMsg.value = '비밀번호가 일치하지 않습니다.'
+        return
+    }
+
     try {
-        const res = await api.post(`/api/auth/reset-password`, {
+        await api.post(`/api/auth/reset-password`, {
             username: id.value,
-            phone: phone.value
+            phone: phone.value,
+            password: newPassword.value
         })
-        tempPassword.value = res.data.tempPassword
+        isResetComplete.value = true
         errorMsg.value = ''
     } catch (e: any) {
         console.error(e)
         if (e.response && e.response.data && e.response.data.message) {
             errorMsg.value = e.response.data.message
         } else {
-            errorMsg.value = '비밀번호 찾기 중 오류가 발생했습니다.'
+            errorMsg.value = '비밀번호 재설정 중 오류가 발생했습니다.'
         }
-        tempPassword.value = ''
     }
 }
 </script>
@@ -79,18 +91,20 @@ const handleFindPassword = async () => {
   <div class="min-h-screen flex items-start justify-center bg-gray-50 pt-32 relative">
     <div class="max-w-md w-full space-y-8 p-8 bg-white shadow rounded z-10">
       <div>
-        <h2 class="text-center text-3xl font-extrabold text-gray-900">비밀번호 찾기</h2>
+        <h2 class="text-center text-3xl font-extrabold text-gray-900">비밀번호 재설정</h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-          아이디와 가입 시 등록한 휴대폰 번호로 인증하여<br>임시 비밀번호를 발급받을 수 있습니다.
+          아이디와 가입 시 등록한 휴대폰 번호로 인증하여<br>비밀번호를 재설정할 수 있습니다.
         </p>
       </div>
 
-      <div v-if="tempPassword" class="mt-8 bg-indigo-50 p-6 rounded-lg text-center">
-          <p class="text-gray-600 mb-2">임시 비밀번호가 발급되었습니다.</p>
-          <div class="bg-white p-3 border border-indigo-200 rounded mb-4">
-              <p class="text-xl font-mono font-bold text-indigo-700 tracking-wider select-all">{{ tempPassword }}</p>
+      <div v-if="isResetComplete" class="mt-8 bg-indigo-50 p-6 rounded-lg text-center">
+          <div class="mb-4 text-indigo-600">
+              <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
           </div>
-          <p class="text-xs text-red-500 mb-6">로그인 후 반드시 비밀번호를 변경해주세요.</p>
+          <p class="text-gray-900 font-bold text-lg mb-2">비밀번호 재설정 완료</p>
+          <p class="text-gray-600 mb-6">성공적으로 비밀번호가 변경되었습니다.<br>새로운 비밀번호로 로그인해주세요.</p>
           
           <router-link to="/login" class="inline-flex justify-center w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
               로그인하러 가기
@@ -145,6 +159,32 @@ const handleFindPassword = async () => {
               </div>
               <p v-if="verificationMsg.text" class="mt-1 text-xs text-red-600">{{ verificationMsg.text }}</p>
             </div>
+
+            <!-- 새 비밀번호 입력 (인증 완료 후 노출) -->
+            <div v-if="isVerified" class="pt-4 border-t border-gray-100 space-y-4">
+                <div>
+                  <label for="newPassword" class="block text-sm font-medium text-gray-700">새 비밀번호</label>
+                  <input 
+                    id="newPassword" 
+                    v-model="newPassword" 
+                    type="password" 
+                    required 
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                    placeholder="영문, 숫자 포함 8자 이상"
+                  >
+                </div>
+                <div>
+                  <label for="confirmPassword" class="block text-sm font-medium text-gray-700">새 비밀번호 확인</label>
+                  <input 
+                    id="confirmPassword" 
+                    v-model="confirmPassword" 
+                    type="password" 
+                    required 
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                    placeholder="비밀번호 재입력"
+                  >
+                </div>
+            </div>
         </div>
 
         <div>
@@ -153,7 +193,7 @@ const handleFindPassword = async () => {
             :disabled="!isVerified" 
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            임시 비밀번호 발급
+            {{ isVerified ? '비밀번호 변경하기' : '비밀번호 재설정' }}
           </button>
         </div>
 

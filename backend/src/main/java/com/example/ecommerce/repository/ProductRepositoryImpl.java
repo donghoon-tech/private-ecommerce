@@ -18,7 +18,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<Product> searchProducts(UUID categoryId, String itemCondition, String itemName) {
+    public List<Product> searchProducts(UUID categoryId, String itemCondition) {
         QProduct product = QProduct.product;
         QCategory category = QCategory.category;
         QUser seller = QUser.user;
@@ -30,8 +30,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
                 .where(
                         product.isDisplayed.isTrue(),
                         categoryIdEq(categoryId),
-                        itemConditionEq(itemCondition),
-                        itemNameContains(itemName)
+                        itemConditionEq(itemCondition)
                 )
                 .fetch();
     }
@@ -42,9 +41,5 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
 
     private BooleanExpression itemConditionEq(String itemCondition) {
         return StringUtils.hasText(itemCondition) ? QProduct.product.itemCondition.eq(itemCondition) : null;
-    }
-
-    private BooleanExpression itemNameContains(String itemName) {
-        return StringUtils.hasText(itemName) ? QProduct.product.itemName.containsIgnoreCase(itemName) : null;
     }
 }

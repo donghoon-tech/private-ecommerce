@@ -17,9 +17,7 @@ const products = ref<Product[]>([])
 const loading = ref(true)
 const error = ref('')
 
-// Search & Filter
-const searchQuery = ref('')
-const sortOrder = ref('latest')
+// Filters
 const selectedSellers = ref<string[]>([])
 
 const mockSellers = ['건설자재총판', '대한철강', '안전제일자재', '현대건설자재', 'K-스틸']
@@ -100,7 +98,6 @@ const toggleSeller = (sellerName: string) => {
 
 // Clear All Filters
 const clearAllFilters = () => {
-    searchQuery.value = ''
     router.push({ query: { ...route.query, seller: undefined } })
 }
 
@@ -131,19 +128,6 @@ const filteredProducts = computed(() => {
         // Mock logic: exact match
         result = result.filter(p => p.sellerName && selectedSellers.value.includes(p.sellerName))
     }
-
-    // 1. Search
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        result = result.filter(p => p.itemName.toLowerCase().includes(query))
-    }
-
-    // 2. Sort
-    if (sortOrder.value === 'price-asc') {
-        result.sort((a, b) => a.unitPrice - b.unitPrice)
-    } else if (sortOrder.value === 'price-desc') {
-        result.sort((a, b) => b.unitPrice - a.unitPrice)
-    } 
 
     return result
 })
@@ -243,27 +227,6 @@ const toggleCategory = (categoryName: string) => {
 
     <!-- 메인 컨텐츠 -->
     <main class="w-full md:w-3/4">
-      <!-- 검색 및 필터 바 -->
-      <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div class="relative w-full sm:w-96">
-              <input 
-                type="text" 
-                v-model="searchQuery" 
-                placeholder="상품명 검색..." 
-                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-              <div class="absolute left-3 top-2.5 text-gray-400">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-              </div>
-          </div>
-          <div class="flex items-center gap-2">
-              <select v-model="sortOrder" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                  <option value="latest">최신순</option>
-                  <option value="price-asc">낮은 가격순</option>
-                  <option value="price-desc">높은 가격순</option>
-              </select>
-          </div>
-      </div>
 
       <!-- Active Filters (Chips) -->
       <div v-if="selectedSellers.length > 0" class="flex items-start mb-6 -mt-2 animate-fade-in-down">

@@ -19,11 +19,10 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<List<ProductDTO>> getAllProducts(
             @RequestParam(required = false) UUID categoryId,
-            @RequestParam(required = false) String grade,
-            @RequestParam(required = false) String itemName) {
+            @RequestParam(required = false) String grade) {
         
-        if (categoryId != null || grade != null || itemName != null) {
-            return ResponseEntity.ok(productService.searchProducts(categoryId, grade, itemName));
+        if (categoryId != null || grade != null) {
+            return ResponseEntity.ok(productService.searchProducts(categoryId, grade));
         }
         return ResponseEntity.ok(productService.getAllProducts());
     }

@@ -5,5 +5,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ProductRepositoryCustom {
-    List<Product> searchProducts(UUID categoryId, String itemCondition, String itemName);
+    List<Product> searchProducts(UUID categoryId, String itemCondition);
 }

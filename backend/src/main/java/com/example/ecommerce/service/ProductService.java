@@ -35,7 +35,7 @@ public class ProductService {
      * @return 전체 상품 DTO 리스트
      */
     public List<ProductDTO> getAllProducts() {
-                List<Product> products = productRepository.searchProducts(null, null, null);
+                List<Product> products = productRepository.searchProducts(null, null);
                 return toProductDTOs(products);
         }
 
@@ -55,11 +55,10 @@ public class ProductService {
      *
      * @param categoryId 필터링할 카테고리 ID (null 허용)
      * @param itemCondition 상품 상태 조건 (null 허용)
-     * @param itemName 검색할 상품명 키워드 (null 허용)
      * @return 검색된 상품 DTO 리스트
      */
-    public List<ProductDTO> searchProducts(UUID categoryId, String itemCondition, String itemName) {
-                List<Product> products = productRepository.searchProducts(categoryId, itemCondition, itemName);
+    public List<ProductDTO> searchProducts(UUID categoryId, String itemCondition) {
+                List<Product> products = productRepository.searchProducts(categoryId, itemCondition);
                 return toProductDTOs(products);
         }
 

@@ -2,10 +2,12 @@ package com.example.ecommerce.service;
 
 import com.example.ecommerce.dto.CartDTO;
 import com.example.ecommerce.dto.request.CartRequest;
+import com.example.ecommerce.entity.BusinessProfile;
 import com.example.ecommerce.entity.CartItem;
 import com.example.ecommerce.entity.Product;
 import com.example.ecommerce.entity.ProductImage;
 import com.example.ecommerce.entity.User;
+import com.example.ecommerce.repository.BusinessProfileRepository;
 import com.example.ecommerce.repository.CartItemRepository;
 import com.example.ecommerce.repository.ProductImageRepository;
 import com.example.ecommerce.repository.ProductRepository;
@@ -27,6 +29,7 @@ public class CartService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
+    private final BusinessProfileRepository businessProfileRepository;
 
     @Transactional(readOnly = true)
     public List<CartDTO> getUserCart(String username) {
@@ -46,9 +49,21 @@ public class CartService {
             }
         }
         
+        List<UUID> sellerIds = cartItems.stream().map(c -> c.getProduct().getSeller().getId()).distinct().collect(Collectors.toList());
+        java.util.Map<UUID, String> sellerNameMap = new java.util.HashMap<>();
+        if (!sellerIds.isEmpty()) {
+            List<BusinessProfile> profiles = businessProfileRepository.findByUserIdIn(sellerIds);
+            for (BusinessProfile profile : profiles) {
+                if (profile.isMain()) {
+                    sellerNameMap.put(profile.getUser().getId(), profile.getBusinessName());
+                }
+            }
+        }
+
         return cartItems.stream().map(c -> {
             Product p = c.getProduct();
             String imageUrl = productImagesMap.getOrDefault(p.getId(), "");
+            String sellerName = sellerNameMap.getOrDefault(p.getSeller().getId(), p.getSeller().getName());
                 
             return CartDTO.builder()
                 .id(c.getId())
@@ -56,7 +71,7 @@ public class CartService {
                 .itemName(p.getItemName())
                 .productSlug(p.getId().toString())
                 .unitPrice(p.getUnitPrice())
-                .sellerName(p.getSeller().getName())
+                .sellerName(sellerName)
                 .imageUrl(imageUrl)
                 .quantity(c.getQuantity())
                 .build();
@@ -91,13 +106,22 @@ public class CartService {
         String imageUrl = productImageRepository.findByProductId(product.getId())
                 .stream().findFirst().map(ProductImage::getImageUrl).orElse("");
                 
+        String sellerName = product.getSeller().getName();
+        List<BusinessProfile> profiles = businessProfileRepository.findByUserId(product.getSeller().getId());
+        for (BusinessProfile profile : profiles) {
+            if (profile.isMain()) {
+                sellerName = profile.getBusinessName();
+                break;
+            }
+        }
+        
         return CartDTO.builder()
             .id(cartItem.getId())
             .productId(product.getId())
             .itemName(product.getItemName())
             .productSlug(product.getId().toString())
             .unitPrice(product.getUnitPrice())
-            .sellerName(product.getSeller().getName())
+            .sellerName(sellerName)
             .imageUrl(imageUrl)
             .quantity(cartItem.getQuantity())
             .build();

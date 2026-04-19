@@ -70,7 +70,7 @@ class ProductServiceTest {
         ProductDTO expectedDTO = ProductDTO.builder().id(productId).itemName("Test Product").sellerName("Best Seller")
                 .build();
 
-        given(productRepository.searchProducts(null, null, null)).willReturn(List.of(product));
+        given(productRepository.searchProducts(null, null)).willReturn(List.of(product));
         given(productImageRepository.findByProductIdIn(anyList())).willReturn(List.of(image));
         given(businessProfileRepository.findByUserIdIn(anyList())).willReturn(List.of(profile));
         given(productMapper.toDTO(any(Product.class), anyString(), anyList())).willReturn(expectedDTO);
@@ -82,7 +82,7 @@ class ProductServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getSellerName()).isEqualTo("Best Seller");
 
-        then(productRepository).should(times(1)).searchProducts(null, null, null);
+        then(productRepository).should(times(1)).searchProducts(null, null);
         then(productImageRepository).should(times(1)).findByProductIdIn(anyList());
         then(businessProfileRepository).should(times(1)).findByUserIdIn(anyList());
     }

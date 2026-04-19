@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface WishlistRepository extends JpaRepository<Wishlist, UUID> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"product", "product.seller"})
     List<Wishlist> findByUserIdOrderByCreatedAtDesc(UUID userId);
     Optional<Wishlist> findByUserIdAndProductId(UUID userId, UUID productId);
     boolean existsByUserIdAndProductId(UUID userId, UUID productId);

@@ -35,10 +35,20 @@ public class CartService {
         
         List<CartItem> cartItems = cartItemRepository.findByUserId(user.getId());
         
+        List<UUID> productIds = cartItems.stream().map(c -> c.getProduct().getId()).collect(Collectors.toList());
+        java.util.Map<UUID, String> productImagesMap = new java.util.HashMap<>();
+        if (!productIds.isEmpty()) {
+            List<ProductImage> images = productImageRepository.findByProductIdIn(productIds);
+            for (ProductImage image : images) {
+                if (!productImagesMap.containsKey(image.getProduct().getId())) {
+                    productImagesMap.put(image.getProduct().getId(), image.getImageUrl());
+                }
+            }
+        }
+        
         return cartItems.stream().map(c -> {
             Product p = c.getProduct();
-            String imageUrl = productImageRepository.findByProductId(p.getId())
-                .stream().findFirst().map(ProductImage::getImageUrl).orElse("");
+            String imageUrl = productImagesMap.getOrDefault(p.getId(), "");
                 
             return CartDTO.builder()
                 .id(c.getId())

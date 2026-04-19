@@ -33,16 +33,38 @@ export const useWishlistStore = defineStore('wishlist', () => {
     }
   }
 
-  const toggleWishlist = async (productId: string) => {
+  const toggleWishlist = async (productId: string, partialProductData: any = {}) => {
     const authStore = useAuthStore()
     if (!authStore.isLoggedIn) {
       alert('로그인이 필요한 서비스입니다.')
       return false
     }
 
+    // 1. Optimistic UI Update (즉각적인 화면 반응)
+    const existingIndex = items.value.findIndex(item => item.productId === productId)
+    if (existingIndex >= 0) {
+      items.value.splice(existingIndex, 1)
+    } else {
+      items.value.push({ 
+          productId, 
+          id: 'temp-' + Date.now(),
+          itemName: partialProductData.itemName || '',
+          unitPrice: partialProductData.unitPrice || 0,
+          imageUrl: partialProductData.imageUrl || '',
+          sellerName: partialProductData.sellerName || '',
+          productSlug: partialProductData.productSlug || '',
+          quantity: 1
+      } as any)
+    }
+
     try {
-      await api.post(`/api/wishlists/${productId}/toggle`)
-      await fetchWishlists() // Refresh the list
+      // 2. 비동기 백엔드 요청
+      api.post(`/api/wishlists/${productId}/toggle`).then(() => {
+        fetchWishlists() // 요청 성공 후 백그라운드에서 전체 데이터 동기화
+      }).catch(e => {
+        console.error('Failed to toggle wishlist on server:', e)
+        fetchWishlists() // 실패 시 원래 상태로 복구
+      })
       return true
     } catch (e) {
       console.error('Failed to toggle wishlist:', e)

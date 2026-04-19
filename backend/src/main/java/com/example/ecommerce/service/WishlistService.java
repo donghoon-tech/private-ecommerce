@@ -32,10 +32,20 @@ public class WishlistService {
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
         List<Wishlist> wishlists = wishlistRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
         
+        List<UUID> productIds = wishlists.stream().map(w -> w.getProduct().getId()).collect(Collectors.toList());
+        java.util.Map<UUID, String> productImagesMap = new java.util.HashMap<>();
+        if (!productIds.isEmpty()) {
+            List<ProductImage> images = productImageRepository.findByProductIdIn(productIds);
+            for (ProductImage image : images) {
+                if (!productImagesMap.containsKey(image.getProduct().getId())) {
+                    productImagesMap.put(image.getProduct().getId(), image.getImageUrl());
+                }
+            }
+        }
+        
         return wishlists.stream().map(w -> {
             Product p = w.getProduct();
-            String imageUrl = productImageRepository.findByProductId(p.getId())
-                .stream().findFirst().map(ProductImage::getImageUrl).orElse("");
+            String imageUrl = productImagesMap.getOrDefault(p.getId(), "");
                 
             return WishlistDTO.builder()
                 .id(w.getId())

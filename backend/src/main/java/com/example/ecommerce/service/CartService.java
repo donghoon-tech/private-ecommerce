@@ -5,20 +5,15 @@ import com.example.ecommerce.dto.request.CartRequest;
 import com.example.ecommerce.entity.BusinessProfile;
 import com.example.ecommerce.entity.CartItem;
 import com.example.ecommerce.entity.Product;
-import com.example.ecommerce.entity.ProductImage;
 import com.example.ecommerce.entity.User;
-import com.example.ecommerce.repository.BusinessProfileRepository;
 import com.example.ecommerce.repository.CartItemRepository;
-import com.example.ecommerce.repository.ProductImageRepository;
 import com.example.ecommerce.repository.ProductRepository;
 import com.example.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -30,12 +25,11 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
-    private final ProductImageRepository productImageRepository;
-    private final BusinessProfileRepository businessProfileRepository;
 
     /**
      * 사용자의 장바구니 목록을 조회합니다.
-     * 상품 이미지 및 판매자 정보를 일괄 조회(Batch Fetching)하여 N+1 문제를 완화하는 최적화가 적용되어 있습니다.
+     * default_batch_fetch_size 옵션을 활용하여
+     * N+1 문제 및 카테시안 곱(Cartesian Product)으로 인한 데이터 중복 현상 해결
      *
      * @param username 장바구니를 조회할 사용자 식별자
      * @return 장바구니 상품 정보 목록
@@ -46,33 +40,18 @@ public class CartService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
         List<CartItem> cartItems = cartItemRepository.findByUserId(user.getId());
-        
-        List<UUID> productIds = cartItems.stream().map(c -> c.getProduct().getId()).collect(Collectors.toList());
-        Map<UUID, String> productImagesMap = new HashMap<>();
-        if (!productIds.isEmpty()) {
-            List<ProductImage> images = productImageRepository.findByProductIdIn(productIds);
-            for (ProductImage image : images) {
-                if (!productImagesMap.containsKey(image.getProduct().getId())) {
-                    productImagesMap.put(image.getProduct().getId(), image.getImageUrl());
-                }
-            }
-        }
-        
-        List<UUID> sellerIds = cartItems.stream().map(c -> c.getProduct().getSeller().getId()).distinct().collect(Collectors.toList());
-        Map<UUID, String> sellerNameMap = new HashMap<>();
-        if (!sellerIds.isEmpty()) {
-            List<BusinessProfile> profiles = businessProfileRepository.findByUserIdIn(sellerIds);
-            for (BusinessProfile profile : profiles) {
-                if (profile.isMain()) {
-                    sellerNameMap.put(profile.getUser().getId(), profile.getBusinessName());
-                }
-            }
-        }
 
         return cartItems.stream().map(c -> {
             Product p = c.getProduct();
-            String imageUrl = productImagesMap.getOrDefault(p.getId(), "");
-            String sellerName = sellerNameMap.getOrDefault(p.getSeller().getId(), p.getSeller().getName());
+            String imageUrl = p.getImages().isEmpty() ? "" : p.getImages().get(0).getImageUrl();
+            
+            String sellerName = p.getSeller().getName();
+            for (BusinessProfile profile : p.getSeller().getBusinessProfiles()) {
+                if (profile.isMain()) {
+                    sellerName = profile.getBusinessName();
+                    break;
+                }
+            }
                 
             return CartDTO.builder()
                 .id(c.getId())
@@ -120,12 +99,9 @@ public class CartService {
         
         cartItemRepository.save(cartItem);
         
-        String imageUrl = productImageRepository.findByProductId(product.getId())
-                .stream().findFirst().map(ProductImage::getImageUrl).orElse("");
-                
+        String imageUrl = product.getImages().isEmpty() ? "" : product.getImages().get(0).getImageUrl();
         String sellerName = product.getSeller().getName();
-        List<BusinessProfile> profiles = businessProfileRepository.findByUserId(product.getSeller().getId());
-        for (BusinessProfile profile : profiles) {
+        for (BusinessProfile profile : product.getSeller().getBusinessProfiles()) {
             if (profile.isMain()) {
                 sellerName = profile.getBusinessName();
                 break;

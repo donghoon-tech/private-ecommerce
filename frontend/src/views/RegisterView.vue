@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import api from '../utils/api'
+import AppButton from '../components/ui/AppButton.vue'
+import AppInput from '../components/ui/AppInput.vue'
 
-// Daum 우편번호 서비스를 위한 전역 선언
-declare const daum: any;
+declare const daum: any
 
-// 상태 관리
 const form = ref({
-  id: '', // username
+  id: '',
   password: '',
   passwordConfirm: '',
   email: '',
@@ -18,7 +18,7 @@ const form = ref({
   businessDetailAddress: '',
   yardAddress: '',
   yardDetailAddress: '',
-  companyName: '' // 회사명 추가
+  companyName: ''
 })
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -27,28 +27,18 @@ const isVerificationSent = ref(false)
 const isSameAddress = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
+const isRegisterSuccess = ref(false)
 
-// 중복 확인 상태
 const isIdChecked = ref(false)
 const idCheckMsg = ref({ type: '', text: '' })
-
-// 화면 표시용 상태 메시지
-const phoneMsg = ref({ type: '', text: '' }) // type: 'error' | 'success' | 'info'
+const phoneMsg = ref({ type: '', text: '' })
 const verificationMsg = ref({ type: '', text: '' })
 
-// 유효성 검사 규칙
 const validation = ref({
-  id: {
-    valid: true,
-    msg: ''
-  },
-  password: {
-    valid: true,
-    msg: ''
-  }
+  id:       { valid: true, msg: '' },
+  password: { valid: true, msg: '' }
 })
 
-// 아이디 유효성 검사 (4~20자, 영문 소문자, 숫자, _, -)
 const validateId = () => {
   const idRegex = /^[a-z0-9_-]{4,20}$/
   if (!form.value.id) {
@@ -60,14 +50,12 @@ const validateId = () => {
   }
 }
 
-// 아이디 중복 확인
 const checkIdDuplication = async () => {
   validateId()
   if (!validation.value.id.valid) return
-
   try {
-    const response = await api.post('/api/auth/check-username', { username: form.value.id })
-    if (response.data.exists) {
+    const res = await api.post('/api/auth/check-username', { username: form.value.id })
+    if (res.data.exists) {
       isIdChecked.value = false
       idCheckMsg.value = { type: 'error', text: '이미 사용 중인 아이디입니다.' }
     } else {
@@ -75,12 +63,10 @@ const checkIdDuplication = async () => {
       idCheckMsg.value = { type: 'success', text: '사용 가능한 아이디입니다.' }
     }
   } catch (e) {
-    console.error('아이디 중복 확인 실패:', e)
     idCheckMsg.value = { type: 'error', text: '오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
   }
 }
 
-// 비밀번호 유효성 검사 (8~20자, 영문+숫자 조합)
 const validatePassword = () => {
   const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,20}$/
   if (!form.value.password) {
@@ -92,23 +78,18 @@ const validatePassword = () => {
   }
 }
 
-// 비밀번호 일치 확인
 const isPasswordMismatch = ref(false)
 watch(() => [form.value.password, form.value.passwordConfirm], ([pwd, confirm]) => {
   isPasswordMismatch.value = pwd !== confirm && confirm !== ''
 })
-
-// 실시간 유효성 검사 트리거
 watch(() => form.value.id, () => {
   validateId()
-  isIdChecked.value = false // 아이디 변경 시 중복확인 다시 해야 함
+  isIdChecked.value = false
   idCheckMsg.value = { type: '', text: '' }
 })
 watch(() => form.value.password, validatePassword)
-
-// 주소 동기화 로직
-watch(isSameAddress, (newVal) => {
-  if (newVal) {
+watch(isSameAddress, (v) => {
+  if (v) {
     form.value.yardAddress = form.value.businessAddress
     form.value.yardDetailAddress = form.value.businessDetailAddress
   } else {
@@ -116,379 +97,473 @@ watch(isSameAddress, (newVal) => {
     form.value.yardDetailAddress = ''
   }
 })
-
-// 사업장 주소가 바뀌는데 체크되어 있다면 야적장 주소도 같이 업데이트
-watch(() => [form.value.businessAddress, form.value.businessDetailAddress], ([newAddr, newDetail]) => {
+watch(() => [form.value.businessAddress, form.value.businessDetailAddress], ([addr, detail]) => {
   if (isSameAddress.value) {
-    form.value.yardAddress = newAddr as string
-    form.value.yardDetailAddress = newDetail as string
+    form.value.yardAddress = addr as string
+    form.value.yardDetailAddress = detail as string
   }
 })
 
-// 더미 휴대폰 인증 로직
 const requestVerification = () => {
-  if (!form.value.phoneNumber) {
-    phoneMsg.value = { type: 'error', text: '휴대폰 번호를 입력해주세요.' }
-    return
-  }
-  // 성공 시 메시지
+  if (!form.value.phoneNumber) { phoneMsg.value = { type: 'error', text: '휴대폰 번호를 입력해주세요.' }; return }
   isVerificationSent.value = true
   phoneMsg.value = { type: 'info', text: '인증번호가 발송되었습니다. (테스트용: 아무 번호나 입력하세요)' }
-  verificationMsg.value = { type: '', text: '' } // 인증번호 입력창 메시지 초기화
+  verificationMsg.value = { type: '', text: '' }
 }
-
 const verifyCode = () => {
-  if (!form.value.verificationCode) {
-    verificationMsg.value = { type: 'error', text: '인증번호를 입력해주세요.' }
-    return
-  }
+  if (!form.value.verificationCode) { verificationMsg.value = { type: 'error', text: '인증번호를 입력해주세요.' }; return }
   isPhoneVerified.value = true
   phoneMsg.value = { type: 'success', text: '인증이 완료되었습니다.' }
   verificationMsg.value = { type: '', text: '' }
 }
 
 const handleRegister = async () => {
-  // 실시간 검증 실행
   validateId()
   validatePassword()
+  if (!isIdChecked.value) { errorMsg.value = '아이디 중복 확인을 해주세요.'; return }
+  if (!validation.value.id.valid || !validation.value.password.valid) { errorMsg.value = '입력 정보를 확인해주세요.'; return }
+  if (isPasswordMismatch.value) { errorMsg.value = '비밀번호가 일치하지 않습니다.'; return }
+  if (!isPhoneVerified.value) { errorMsg.value = '휴대폰 인증을 완료해주세요.'; return }
 
-  if (!isIdChecked.value) {
-    errorMsg.value = '아이디 중복 확인을 해주세요.'
-    return
-  }
-
-  // 유효성 검사
-  if (!validation.value.id.valid || !validation.value.password.valid) {
-    errorMsg.value = '입력 정보를 확인해주세요.'
-    return
-  }
-  if (isPasswordMismatch.value) {
-    errorMsg.value = '비밀번호가 일치하지 않습니다.'
-    return
-  }
-  if (!isPhoneVerified.value) {
-    errorMsg.value = '휴대폰 인증을 완료해주세요.'
-    return
-  }
-  
   loading.value = true
   errorMsg.value = ''
-
   try {
-      // API 호출 (Spring Boot)
-      await api.post(`/api/auth/register`, {
-        username: form.value.id,
-        password: form.value.password,
-        phone: form.value.phoneNumber,
-        companyName: form.value.companyName,
-        email: form.value.email || null,
-        businessNumber: form.value.businessNumber || null,
-        businessAddress: form.value.businessAddress ? `${form.value.businessAddress} ${form.value.businessDetailAddress}`.trim() : null,
-        yardAddress: form.value.yardAddress ? `${form.value.yardAddress} ${form.value.yardDetailAddress}`.trim() : null
-      })
-
-      // 성공 화면 전환을 위해 errorMsg를 활용하거나 별도 상태값 사용
-      // 여기서는 간단히 alert 대신 화면 내용을 교체하는 방식을 사용
-      isRegisterSuccess.value = true
-
+    await api.post(`/api/auth/register`, {
+      username: form.value.id,
+      password: form.value.password,
+      phone: form.value.phoneNumber,
+      companyName: form.value.companyName,
+      email: form.value.email || null,
+      businessNumber: form.value.businessNumber || null,
+      businessAddress: form.value.businessAddress ? `${form.value.businessAddress} ${form.value.businessDetailAddress}`.trim() : null,
+      yardAddress: form.value.yardAddress ? `${form.value.yardAddress} ${form.value.yardDetailAddress}`.trim() : null
+    })
+    isRegisterSuccess.value = true
   } catch (e: any) {
-    console.error('회원가입 실패:', e)
-    if (e.response && e.response.data && e.response.data.message) {
-        errorMsg.value = e.response.data.message // 백엔드에서 온 메시지 (예: 이미 가입된 전화번호입니다.)
-    } else if (e.message) {
-        errorMsg.value = e.message
-    } else {
-        errorMsg.value = '회원가입 처리 중 오류가 발생했습니다.'
-    }
+    errorMsg.value = e.response?.data?.message || e.message || '회원가입 처리 중 오류가 발생했습니다.'
   } finally {
     loading.value = false
   }
 }
 
-const isRegisterSuccess = ref(false)
-
-// 주소 검색 함수
 const execDaumPostcode = (type: 'business' | 'yard') => {
   new daum.Postcode({
     oncomplete: (data: any) => {
-      // 팝업에서 검색결과 항목을 클릭했을때 실행할 코드를 작성하는 부분.
-
-      // 각 주소의 노출 규칙에 따라 주소를 조합한다.
-      // 내려오는 변수가 값이 없는 경우엔 공백('')값을 가지므로, 이를 참고하여 분기 한다.
-      let addr = ''; // 주소 변수
-      let extraAddr = ''; // 참고항목 변수
-
-      //사용자가 선택한 주소 타입에 따라 해당 주소 값을 가져온다.
-      if (data.userSelectedType === 'R') { // 사용자가 도로명 주소를 선택했을 경우
-        addr = data.roadAddress;
-      } else { // 사용자가 지번 주소를 선택했을 경우(J)
-        addr = data.jibunAddress;
-      }
-
-      // 사용자가 선택한 주소가 도로명 타입일때 참고항목을 조합한다.
+      let addr = data.userSelectedType === 'R' ? data.roadAddress : data.jibunAddress
+      let extra = ''
       if (data.userSelectedType === 'R') {
-        // 법정동명이 있을 경우 추가한다. (법정리는 제외)
-        // 법정동의 경우 마지막 문자가 "동/로/가"로 끝난다.
-        if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
-          extraAddr += data.bname;
-        }
-        // 건물명이 있고, 공동주택일 경우 추가한다.
-        if (data.buildingName !== '' && data.apartment === 'Y') {
-          extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
-        }
-        // 표시할 참고항목이 있을 경우, 괄호까지 추가한 최종 문자열을 만든다.
-        if (extraAddr !== '') {
-          extraAddr = ' (' + extraAddr + ')';
-        }
+        if (data.bname && /[동|로|가]$/g.test(data.bname)) extra += data.bname
+        if (data.buildingName && data.apartment === 'Y') extra += (extra ? ', ' : '') + data.buildingName
+        if (extra) extra = ` (${extra})`
       }
-
-      // 주소 정보를 해당 필드에 넣는다.
+      const full = `(${data.zonecode}) ${addr}${extra}`
       if (type === 'business') {
-        form.value.businessAddress = `(${data.zonecode}) ${addr}${extraAddr}`;
-        // 상세 주소 필드에 포커스 (선택 사항)
-        const detailInput = document.getElementById('businessDetailAddress');
-        if (detailInput) detailInput.focus();
+        form.value.businessAddress = full
+        const el = document.getElementById('businessDetailAddress')
+        if (el) el.focus()
       } else {
-        form.value.yardAddress = `(${data.zonecode}) ${addr}${extraAddr}`;
-        const detailInput = document.getElementById('yardDetailAddress');
-        if (detailInput) detailInput.focus();
+        form.value.yardAddress = full
+        const el = document.getElementById('yardDetailAddress')
+        if (el) el.focus()
       }
     }
-  }).open();
+  }).open()
 }
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-xl w-full space-y-8 bg-white p-8 shadow rounded-lg">
-      
-      <!-- 회원가입 성공 화면 -->
-      <div v-if="isRegisterSuccess" class="text-center py-10">
-        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-          <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+  <div class="reg-bg">
+    <div class="reg-card gl-zoom-in">
+
+      <!-- Success State -->
+      <div v-if="isRegisterSuccess" class="reg-success">
+        <div class="reg-success__icon">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">회원가입 완료!</h2>
-        <p class="text-gray-600 mb-8">성공적으로 회원가입이 되었습니다.<br>로그인 후 서비스를 이용해주세요.</p>
-        <router-link to="/login" class="inline-flex justify-center w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <h1 class="reg-success__title">회원가입 완료!</h1>
+        <p class="reg-success__desc">성공적으로 회원가입이 되었습니다.<br>로그인 후 서비스를 이용해주세요.</p>
+        <AppButton block size="lg" @click="$router.push('/login')" style="margin-top:1.75rem;">
           로그인하러 가기
-        </router-link>
+        </AppButton>
       </div>
 
-      <!-- 회원가입 폼 -->
+      <!-- Form -->
       <div v-else>
-        <div>
-          <h2 class="text-center text-3xl font-extrabold text-gray-900">회원가입</h2>
-          <p class="mt-2 text-center text-sm text-gray-600">
+        <!-- Header -->
+        <div class="reg-header">
+          <div class="reg-logo-icon">GL</div>
+          <h1 class="reg-title">회원가입</h1>
+          <p class="reg-sub">
             이미 계정이 있으신가요?
-            <router-link to="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
-              로그인하기
-            </router-link>
+            <router-link to="/login" class="reg-link">로그인하기</router-link>
           </p>
         </div>
 
-        <form class="mt-8 space-y-6" @submit.prevent="handleRegister">
-          
-          <!-- 에러 메시지 -->
-          <div v-if="errorMsg" class="rounded-md bg-red-50 p-4">
-            <div class="text-sm text-red-700">{{ errorMsg }}</div>
-          </div>
+        <!-- Error Alert -->
+        <div v-if="errorMsg" class="reg-alert">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ errorMsg }}
+        </div>
 
-          <div class="space-y-4">
-            
-            <!-- 기본 정보 섹션 -->
-            <div class="bg-gray-50 p-4 rounded-md space-y-3">
-              <h3 class="text-lg font-medium text-gray-900">기본 정보</h3>
-              
+        <form @submit.prevent="handleRegister" class="reg-form">
+
+          <!-- ── 기본 정보 ── -->
+          <div class="reg-section">
+            <h2 class="reg-section__title">기본 정보</h2>
+            <div class="reg-section__body">
+
               <!-- 아이디 -->
               <div>
-                <label for="id" class="block text-sm font-medium text-gray-700">아이디 <span class="text-red-500">*</span></label>
-                <div class="flex mt-1 gap-2">
-                  <input 
-                    id="id" 
-                    v-model="form.id" 
-                    type="text" 
-                    required 
-                    class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                    :class="{'border-red-500': !validation.id.valid}"
+                <div class="reg-row">
+                  <AppInput
+                    v-model="form.id"
+                    label="아이디"
                     placeholder="4~20자 영문 소문자, 숫자, _, -"
-                  >
-                  <button type="button" @click="checkIdDuplication" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap flex-shrink-0">
+                    :error="!validation.id.valid ? validation.id.msg : ''"
+                    required
+                  />
+                  <AppButton type="button" variant="secondary" @click="checkIdDuplication" style="align-self:flex-end; white-space:nowrap;">
                     중복 확인
-                  </button>
+                  </AppButton>
                 </div>
-                <p v-if="!validation.id.valid" class="mt-1 text-xs text-red-600">{{ validation.id.msg }}</p>
-                <p v-if="idCheckMsg.text" class="mt-1 text-xs" :class="idCheckMsg.type === 'success' ? 'text-green-600' : 'text-red-600'">
+                <p v-if="idCheckMsg.text" :class="['reg-feedback', idCheckMsg.type === 'success' ? 'reg-feedback--success' : 'reg-feedback--error']">
+                  <svg v-if="idCheckMsg.type === 'success'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                  </svg>
                   {{ idCheckMsg.text }}
                 </p>
               </div>
 
               <!-- 비밀번호 -->
-              <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">비밀번호 <span class="text-red-500">*</span></label>
-                <input 
-                  id="password" 
-                  v-model="form.password" 
-                  @blur="validatePassword"
-                  type="password" 
-                  required 
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                  :class="{'border-red-500': !validation.password.valid}"
-                  placeholder="8~20자 영문+숫자 조합"
-                >
-                <p v-if="!validation.password.valid" class="mt-1 text-xs text-red-600">{{ validation.password.msg }}</p>
-              </div>
+              <AppInput
+                v-model="form.password"
+                type="password"
+                label="비밀번호"
+                placeholder="8~20자 영문+숫자 조합"
+                :error="!validation.password.valid ? validation.password.msg : ''"
+                required
+                @blur="validatePassword"
+              />
 
               <!-- 비밀번호 확인 -->
-              <div>
-                <label for="passwordConfirm" class="block text-sm font-medium text-gray-700">비밀번호 재확인 <span class="text-red-500">*</span></label>
-                <input id="passwordConfirm" v-model="form.passwordConfirm" type="password" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="비밀번호를 다시 입력하세요">
-                <p v-if="isPasswordMismatch" class="mt-1 text-sm text-red-600">비밀번호가 일치하지 않습니다.</p>
-              </div>
+              <AppInput
+                v-model="form.passwordConfirm"
+                type="password"
+                label="비밀번호 재확인"
+                placeholder="비밀번호를 다시 입력하세요"
+                :error="isPasswordMismatch ? '비밀번호가 일치하지 않습니다.' : ''"
+                required
+              />
 
-              <!-- 회사명 (추가) -->
-              <div>
-                <label for="companyName" class="block text-sm font-medium text-gray-700">회사명</label>
-                <input id="companyName" v-model="form.companyName" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="회사명 입력">
-              </div>
+              <!-- 회사명 -->
+              <AppInput v-model="form.companyName" label="회사명" placeholder="회사명 입력 (선택)" />
             </div>
+          </div>
 
-            <!-- 연락처 정보 섹션 -->
-            <div class="bg-gray-50 p-4 rounded-md space-y-3">
-              <h3 class="text-lg font-medium text-gray-900">연락처 정보</h3>
-              
-              <!-- 대표 번호 -->
+          <!-- ── 연락처 정보 ── -->
+          <div class="reg-section">
+            <h2 class="reg-section__title">연락처 정보</h2>
+            <div class="reg-section__body">
+
+              <!-- 휴대폰 인증 -->
               <div>
-                <label class="block text-sm font-medium text-gray-700">대표 번호 (본인 인증) <span class="text-red-500">*</span></label>
-                <div class="flex mt-1 gap-2">
-                  <input v-model="form.phoneNumber" type="tel" :disabled="isPhoneVerified" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100" placeholder="- 없이 숫자만 입력">
-                  <button type="button" @click="requestVerification" :disabled="isPhoneVerified" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:bg-gray-400 whitespace-nowrap flex-shrink-0">
+                <div class="reg-row">
+                  <AppInput
+                    v-model="form.phoneNumber"
+                    label="대표 번호 (본인 인증)"
+                    placeholder="- 없이 숫자만 입력"
+                    :disabled="isPhoneVerified"
+                    required
+                  />
+                  <AppButton type="button" variant="secondary" @click="requestVerification" :disabled="isPhoneVerified" style="align-self:flex-end; white-space:nowrap;">
                     {{ isVerificationSent ? '재전송' : '인증요청' }}
-                  </button>
+                  </AppButton>
                 </div>
-                <!-- 인증 메시지 -->
-                <p v-if="phoneMsg.text && !isPhoneVerified" class="mt-1 text-xs" :class="phoneMsg.type === 'error' ? 'text-red-600' : 'text-blue-600'">
-                    {{ phoneMsg.text }}
+                <p v-if="phoneMsg.text && !isPhoneVerified" :class="['reg-feedback', phoneMsg.type === 'error' ? 'reg-feedback--error' : 'reg-feedback--info']">
+                  {{ phoneMsg.text }}
                 </p>
-                 <p v-if="isPhoneVerified" class="mt-1 text-xs text-green-600">✓ 인증이 완료되었습니다.</p>
+                <p v-if="isPhoneVerified" class="reg-feedback reg-feedback--success">
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                  </svg>
+                  인증이 완료되었습니다.
+                </p>
               </div>
 
-              <!-- 인증 번호 확인 -->
+              <!-- 인증번호 입력 -->
               <div v-if="!isPhoneVerified && phoneMsg.type === 'info'">
-                <div class="flex mt-1 gap-2">
-                  <input v-model="form.verificationCode" type="text" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="인증번호 입력">
-                  <button type="button" @click="verifyCode" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none whitespace-nowrap flex-shrink-0">
-                    확인
-                  </button>
+                <div class="reg-row">
+                  <AppInput v-model="form.verificationCode" placeholder="인증번호 입력" />
+                  <AppButton type="button" variant="outline" @click="verifyCode" style="align-self:flex-end; white-space:nowrap;">확인</AppButton>
                 </div>
-                <p v-if="verificationMsg.text" class="mt-1 text-xs text-red-600">{{ verificationMsg.text }}</p>
+                <p v-if="verificationMsg.text" class="reg-feedback reg-feedback--error">{{ verificationMsg.text }}</p>
               </div>
 
-              <!-- 이메일 (선택) -->
+              <!-- 이메일 -->
+              <AppInput v-model="form.email" type="email" label="이메일 (선택)" placeholder="example@domain.com" />
+            </div>
+          </div>
+
+          <!-- ── 사업자 정보 ── -->
+          <div class="reg-section">
+            <h2 class="reg-section__title">사업자 정보 <span class="reg-section__optional">(선택)</span></h2>
+            <div class="reg-section__body">
+              <AppInput v-model="form.businessNumber" label="사업자 등록 번호" placeholder="000-00-00000" />
               <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">이메일 (선택)</label>
-                <input id="email" v-model="form.email" type="email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="example@domain.com">
+                <p class="reg-file-label">사업자 등록증 사본</p>
+                <p class="reg-file-hint">가입 후 마이페이지에서 등록 가능합니다.</p>
               </div>
             </div>
+          </div>
 
-            <!-- 사업자 정보 섹션 -->
-            <div class="bg-gray-50 p-4 rounded-md space-y-3">
-              <h3 class="text-lg font-medium text-gray-900">사업자 정보 (선택)</h3>
-
-              <!-- 사업자 번호 -->
-              <div>
-                <label for="businessNumber" class="block text-sm font-medium text-gray-700">사업자 등록 번호</label>
-                <input id="businessNumber" v-model="form.businessNumber" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="000-00-00000">
-              </div>
-
-              <!-- 사업자 등록증 파일 -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700">사업자 등록증 사본</label>
-                <p class="text-xs text-gray-500 mb-1">가입 후 마이페이지에서 등록 가능합니다.</p>
-                <input ref="fileInput" type="file" disabled class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-400 cursor-not-allowed">
-              </div>
-            </div>
-
-            <!-- 주소 정보 섹션 -->
-            <div class="bg-gray-50 p-4 rounded-md space-y-3">
-              <h3 class="text-lg font-medium text-gray-900">주소지 정보</h3>
+          <!-- ── 주소지 정보 ── -->
+          <div class="reg-section">
+            <h2 class="reg-section__title">주소지 정보 <span class="reg-section__optional">(선택)</span></h2>
+            <div class="reg-section__body">
 
               <!-- 사업장 주소 -->
-              <div class="space-y-1">
-                <label for="businessAddress" class="block text-sm font-medium text-gray-700">사업장 주소 (선택)</label>
-                <div class="flex gap-2">
-                  <input 
-                    id="businessAddress" 
-                    v-model="form.businessAddress" 
-                    type="text" 
-                    readonly 
+              <div class="reg-address-group">
+                <p class="reg-address-label">사업장 주소</p>
+                <div class="reg-row">
+                  <input
+                    id="businessAddress"
+                    v-model="form.businessAddress"
+                    type="text"
+                    readonly
                     @click="execDaumPostcode('business')"
-                    class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 cursor-pointer focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                    placeholder="주소 검색 버튼을 눌러주세요"
-                  >
-                  <button type="button" @click="execDaumPostcode('business')" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap flex-shrink-0">
+                    class="reg-addr-input"
+                    placeholder="주소 검색을 눌러주세요"
+                  />
+                  <AppButton type="button" variant="secondary" @click="execDaumPostcode('business')" style="white-space:nowrap;">
                     주소 검색
-                  </button>
+                  </AppButton>
                 </div>
-                <input 
-                  id="businessDetailAddress" 
-                  v-model="form.businessDetailAddress" 
-                  type="text" 
-                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                  placeholder="상세 주소를 입력하세요 (건물명, 동/호수 등)"
-                >
+                <input
+                  id="businessDetailAddress"
+                  v-model="form.businessDetailAddress"
+                  type="text"
+                  class="reg-detail-input"
+                  placeholder="상세 주소 (건물명, 동/호수 등)"
+                />
               </div>
 
               <!-- 야적장 주소 -->
-              <div class="space-y-1">
-                <div class="flex items-center justify-between">
-                  <label for="yardAddress" class="block text-sm font-medium text-gray-700">야적장 주소 (선택)</label>
-                  <div class="flex items-center">
-                    <input id="sameAddress" type="checkbox" v-model="isSameAddress" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                    <label for="sameAddress" class="ml-2 block text-sm text-gray-900">사업장 주소와 동일</label>
-                  </div>
+              <div class="reg-address-group">
+                <div class="reg-address-title-row">
+                  <p class="reg-address-label">야적장 주소</p>
+                  <label class="reg-same-check">
+                    <input type="checkbox" v-model="isSameAddress" class="reg-checkbox" />
+                    사업장 주소와 동일
+                  </label>
                 </div>
-                <div class="flex gap-2">
-                  <input 
-                    id="yardAddress" 
-                    v-model="form.yardAddress" 
-                    type="text" 
-                    readonly 
+                <div class="reg-row">
+                  <input
+                    id="yardAddress"
+                    v-model="form.yardAddress"
+                    type="text"
+                    readonly
                     :disabled="isSameAddress"
                     @click="!isSameAddress && execDaumPostcode('yard')"
-                    class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 cursor-pointer focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-200" 
-                    placeholder="주소 검색 버튼을 눌러주세요"
-                  >
-                  <button type="button" @click="execDaumPostcode('yard')" :disabled="isSameAddress" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap flex-shrink-0 disabled:bg-gray-400">
+                    class="reg-addr-input"
+                    :class="isSameAddress ? 'reg-addr-input--disabled' : ''"
+                    placeholder="주소 검색을 눌러주세요"
+                  />
+                  <AppButton type="button" variant="secondary" @click="execDaumPostcode('yard')" :disabled="isSameAddress" style="white-space:nowrap;">
                     주소 검색
-                  </button>
+                  </AppButton>
                 </div>
-                <input 
-                  id="yardDetailAddress" 
-                  v-model="form.yardDetailAddress" 
-                  type="text" 
+                <input
+                  id="yardDetailAddress"
+                  v-model="form.yardDetailAddress"
+                  type="text"
                   :disabled="isSameAddress"
-                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-200" 
+                  class="reg-detail-input"
+                  :class="isSameAddress ? 'reg-detail-input--disabled' : ''"
                   placeholder="야적장 상세 주소 (물건 상/하차 지점)"
-                >
+                />
               </div>
             </div>
-
           </div>
 
-          <div>
-            <button 
-              type="submit" 
-              :disabled="loading || !isPhoneVerified || !isIdChecked || !validation.id.valid || !validation.password.valid || isPasswordMismatch || !form.id || !form.password" 
-              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span v-if="loading">처리 중...</span>
-              <span v-else>회원가입 완료</span>
-            </button>
-          </div>
+          <!-- Submit -->
+          <AppButton
+            type="submit"
+            block
+            size="lg"
+            :loading="loading"
+            :disabled="loading || !isPhoneVerified || !isIdChecked || !validation.id.valid || !validation.password.valid || isPasswordMismatch || !form.id || !form.password"
+          >
+            {{ loading ? '처리 중...' : '회원가입 완료' }}
+          </AppButton>
         </form>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.reg-bg {
+  min-height: 100vh;
+  background: var(--color-bg);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1.5rem 5rem;
+}
+.reg-card {
+  width: 100%;
+  max-width: 580px;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  padding: 2.5rem;
+}
+
+/* Success */
+.reg-success { text-align: center; padding: 1rem 0; }
+.reg-success__icon {
+  width: 64px;
+  height: 64px;
+  background: #E6FBF5;
+  color: var(--color-success);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+}
+.reg-success__title { font-size: 1.5rem; font-weight: 800; color: var(--color-navy); margin-bottom: 0.625rem; }
+.reg-success__desc { font-size: 0.9375rem; color: var(--color-text-secondary); line-height: 1.6; }
+
+/* Header */
+.reg-header { text-align: center; margin-bottom: 2rem; }
+.reg-logo-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 900;
+  margin: 0 auto 1rem;
+  box-shadow: 0 4px 12px rgba(0,102,255,0.25);
+}
+.reg-title { font-size: 1.75rem; font-weight: 800; color: var(--color-navy); letter-spacing: -0.025em; margin-bottom: 0.5rem; }
+.reg-sub { font-size: 0.9rem; color: var(--color-text-secondary); }
+.reg-link { color: var(--color-primary); font-weight: 700; text-decoration: none; }
+.reg-link:hover { text-decoration: underline; }
+
+/* Alert */
+.reg-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #FFF0F0;
+  border: 1px solid #FECACA;
+  color: var(--color-danger);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+/* Form */
+.reg-form { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Section card */
+.reg-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+.reg-section__title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: #FAFBFD;
+}
+.reg-section__optional {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.reg-section__body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+
+/* Row (input + button) */
+.reg-row { display: flex; gap: 0.625rem; align-items: flex-start; }
+.reg-row > *:first-child { flex: 1; }
+
+/* Feedback messages */
+.reg-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-top: 0.375rem;
+}
+.reg-feedback--success { color: var(--color-success); }
+.reg-feedback--error   { color: var(--color-danger); }
+.reg-feedback--info    { color: var(--color-info); }
+
+/* File field */
+.reg-file-label { font-size: 0.875rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: 0.125rem; }
+.reg-file-hint  { font-size: 0.8125rem; color: var(--color-text-muted); }
+
+/* Address fields */
+.reg-address-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.reg-address-label { font-size: 0.875rem; font-weight: 600; color: var(--color-text-primary); }
+.reg-address-title-row { display: flex; justify-content: space-between; align-items: center; }
+.reg-same-check {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.reg-checkbox { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; }
+
+.reg-addr-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: #F8FAFC;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  outline: none;
+}
+.reg-addr-input:hover:not(.reg-addr-input--disabled) { border-color: var(--color-primary); }
+.reg-addr-input--disabled { opacity: 0.55; cursor: not-allowed; background: #F1F5F9; }
+
+.reg-detail-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #F8FAFC;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.reg-detail-input::placeholder { color: var(--color-text-muted); }
+.reg-detail-input:focus { border-color: var(--color-border-focus); box-shadow: 0 0 0 3px rgba(0,102,255,0.1); background: white; }
+.reg-detail-input--disabled { opacity: 0.55; cursor: not-allowed; background: #F1F5F9; }
+</style>

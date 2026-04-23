@@ -1,1 +1,311 @@
 @import "tailwindcss";
+
+/* ============================================================
+   GASEOL LINK — Design Token Layer
+   디자인 가이드 기반 CSS 변수 정의
+   ============================================================ */
+@layer base {
+  :root {
+    /* Brand Colors */
+    --color-primary:      #0066FF;
+    --color-primary-dark: #0052CC;
+    --color-primary-light:#EEF4FF;
+    --color-navy:         #1A1A1A;
+    --color-bg:           #F5F7FA;
+    --color-surface:      #FFFFFF;
+
+    /* Semantic Colors */
+    --color-success:      #00B478;
+    --color-warning:      #FF9900;
+    --color-info:         #54A2FF;
+    --color-danger:       #FF4D4D;
+
+    /* Text */
+    --color-text-primary:   #1A1A1A;
+    --color-text-secondary: #64748B;
+    --color-text-muted:     #94A3B8;
+    --color-text-on-primary:#FFFFFF;
+
+    /* Border */
+    --color-border:       #E8ECF0;
+    --color-border-focus: #0066FF;
+
+    /* Shadow */
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --shadow-md:   0 8px 30px rgba(0, 0, 0, 0.08);
+    --shadow-lg:   0 16px 48px rgba(0, 0, 0, 0.12);
+
+    /* Spacing / Radius */
+    --radius-sm:  8px;
+    --radius-md:  12px;
+    --radius-lg:  16px;
+    --radius-xl:  20px;
+    --radius-2xl: 24px;
+  }
+
+  /* Font: Pretendard */
+  @font-face {
+    font-family: 'Pretendard';
+    src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Selection color */
+  ::selection {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+
+  /* Scrollbar — thin & branded */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+@layer utilities {
+  /* Card */
+  .gl-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+  }
+  .gl-card-lg {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Buttons */
+  .gl-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-primary);
+    color: var(--color-text-on-primary);
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    border: none;
+    outline: none;
+  }
+  .gl-btn-primary:hover { background-color: var(--color-primary-dark); }
+  .gl-btn-primary:active { transform: scale(0.97); }
+  .gl-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .gl-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: #F1F5F9;
+    color: var(--color-navy);
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+    border: none;
+    outline: none;
+  }
+  .gl-btn-secondary:hover { background-color: #E2E8F0; }
+  .gl-btn-secondary:active { transform: scale(0.97); }
+  .gl-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .gl-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+    outline: none;
+  }
+  .gl-btn-outline:hover { background-color: var(--color-primary-light); }
+  .gl-btn-outline:active { transform: scale(0.97); }
+  .gl-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .gl-btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-danger);
+    color: white;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+    border: none;
+    outline: none;
+  }
+  .gl-btn-danger:hover { background-color: #E53E3E; }
+  .gl-btn-danger:active { transform: scale(0.97); }
+
+  /* Input */
+  .gl-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #F8FAFC;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    color: var(--color-text-primary);
+    outline: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    font-family: inherit;
+  }
+  .gl-input::placeholder { color: var(--color-text-muted); }
+  .gl-input:focus {
+    background-color: white;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+  }
+  .gl-input:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* Badge */
+  .gl-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .gl-badge-primary {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+  .gl-badge-success {
+    background-color: #E6FBF5;
+    color: var(--color-success);
+  }
+  .gl-badge-warning {
+    background-color: #FFF8E6;
+    color: var(--color-warning);
+  }
+  .gl-badge-danger {
+    background-color: #FFF0F0;
+    color: var(--color-danger);
+  }
+
+  /* Price — 가격 강조 */
+  .gl-price {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--color-primary);
+    letter-spacing: -0.01em;
+  }
+  .gl-price-lg {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--color-primary);
+    letter-spacing: -0.02em;
+  }
+
+  /* Section header */
+  .gl-page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .gl-page-header h1 {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: var(--color-navy);
+    letter-spacing: -0.02em;
+  }
+  .gl-page-header p {
+    margin-top: 0.375rem;
+    color: var(--color-text-secondary);
+    font-size: 0.9375rem;
+  }
+
+  /* Empty state container */
+  .gl-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem;
+    text-align: center;
+    background: white;
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+  .gl-empty-icon {
+    padding: 1.5rem;
+    border-radius: 50%;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Divider */
+  .gl-divider {
+    border: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Fade animations */
+  .gl-fade-in {
+    animation: glFadeIn 0.3s ease-out both;
+  }
+  @keyframes glFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .gl-zoom-in {
+    animation: glZoomIn 0.25s ease-out both;
+  }
+  @keyframes glZoomIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* Product card hover */
+  .gl-product-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+    cursor: pointer;
+  }
+  .gl-product-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: #C7D7F5;
+    transform: translateY(-2px);
+  }
+}

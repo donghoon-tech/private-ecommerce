@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import api from '../../utils/api'
+import AppPageHeader from '../../components/ui/AppPageHeader.vue'
+import AppButton from '../../components/ui/AppButton.vue'
+import AppInput from '../../components/ui/AppInput.vue'
+import AppCard from '../../components/ui/AppCard.vue'
+import AppBadge from '../../components/ui/AppBadge.vue'
 
 interface ProgramDTO {
   id: string
@@ -25,7 +30,6 @@ const selectedRole = ref<Role | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const errorMsg = ref('')
-const successMsg = ref('')
 
 // 새 Role 생성 폼
 const showCreateForm = ref(false)
@@ -37,9 +41,13 @@ const PROTECTED_ROLES = ['UNVERIFIED', 'USER', 'ADMIN']
 const checkedAssignedIds = ref<string[]>([])
 const checkedAllIds = ref<string[]>([])
 
+// 필터 상태 (전체 프로그램)
+const filterCategory1 = ref('')
+const filterCategory2 = ref('')
+const filterType = ref('')
 const filterKeyword = ref('')
 
-// 부여된 프로그램 필터 상태
+// 필터 상태 (부여된 프로그램)
 const assignFilterCat1 = ref('')
 const assignFilterCat2 = ref('')
 const assignFilterType = ref('')
@@ -47,6 +55,10 @@ const assignFilterKeyword = ref('')
 
 onMounted(async () => {
   await Promise.all([fetchRoles(), fetchAllPrograms()])
+  // 첫 번째 권한 자동 선택
+  if (roles.value.length > 0) {
+    selectRole(roles.value[0])
+  }
 })
 
 const fetchRoles = async () => {
@@ -76,7 +88,6 @@ const selectRole = (role: Role) => {
   checkedAssignedIds.value = []
   checkedAllIds.value = []
   errorMsg.value = ''
-  successMsg.value = ''
 }
 
 const unassignedPrograms = computed(() => {
@@ -84,10 +95,8 @@ const unassignedPrograms = computed(() => {
   const assignedIds = new Set(selectedRole.value.programs.map(p => p.id))
   
   return allPrograms.value.filter(p => {
-    // 1. 이미 할당된 프로그램 제외
     if (assignedIds.has(p.id)) return false
     
-    // 2. 필터 적용
     if (filterCategory1.value && p.category1 !== filterCategory1.value) return false
     if (filterCategory2.value && p.category2 !== filterCategory2.value) return false
     if (filterType.value && p.type !== filterType.value) return false
@@ -118,81 +127,49 @@ const uniqueCategories2 = computed(() => {
   return Array.from(cats) as string[]
 })
 
-// 프로그램 할당 (선택 부여)
 const assignSelectedPrograms = async () => {
   if (!selectedRole.value || checkedAllIds.value.length === 0) return
   errorMsg.value = ''
-  successMsg.value = ''
   try {
     const res = await api.post(`/api/admin/roles/${selectedRole.value.id}/programs`, checkedAllIds.value)
-    
-    // 할당 성공 시목록 업데이트
     const idx = roles.value.findIndex(r => r.id === res.data.id)
     if (idx !== -1) roles.value[idx] = res.data
     selectedRole.value = res.data
     checkedAllIds.value = []
-    successMsg.value = '선택한 프로그램이 권한 그룹에 부여되었습니다.'
+    alert('선택한 프로그램이 권한 그룹에 부여되었습니다.')
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || '프로그램 할당에 실패했습니다.'
   }
 }
 
-// 프로그램 회수 (선택 삭제)
 const removeSelectedPrograms = async () => {
   if (!selectedRole.value || checkedAssignedIds.value.length === 0) return
   errorMsg.value = ''
-  successMsg.value = ''
   try {
     const res = await api.delete(`/api/admin/roles/${selectedRole.value.id}/programs`, { data: checkedAssignedIds.value })
-    
-    // 회수 성공 시목록 업데이트
     const idx = roles.value.findIndex(r => r.id === res.data.id)
     if (idx !== -1) roles.value[idx] = res.data
     selectedRole.value = res.data
     checkedAssignedIds.value = []
-    successMsg.value = '선택한 프로그램이 권한 그룹에서 회수되었습니다.'
+    alert('선택한 프로그램이 권한 그룹에서 회수되었습니다.')
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || '프로그램 회수에 실패했습니다.'
   }
 }
 
-// 이름/설명만 업데이트 수정 (매트릭스 아님)
-const updateRoleInfo = async () => {
-  if (!selectedRole.value) return
-  saving.value = true
-  errorMsg.value = ''
-  successMsg.value = ''
-  try {
-    const res = await api.put(
-      `/api/admin/roles/${selectedRole.value.id}`,
-      {
-        name: selectedRole.value.name,
-        description: selectedRole.value.description,
-        programIds: selectedRole.value.programs.map(p => p.id) // 기존 프로그램 유지
-      }
-    )
-    const idx = roles.value.findIndex(r => r.id === res.data.id)
-    if (idx !== -1) roles.value[idx] = res.data
-    selectedRole.value = res.data
-    successMsg.value = '역할 정보가 수정되었습니다.'
-  } catch (e: any) {
-    errorMsg.value = e.response?.data?.message || '수정에 실패했습니다.'
-  } finally {
-    saving.value = false
-  }
-}
-
 const deleteRole = async (role: Role) => {
   if (PROTECTED_ROLES.includes(role.name)) {
-    errorMsg.value = `기본 Role(${role.name})은 삭제할 수 없습니다.`
+    alert(`기본 Role(${role.name})은 삭제할 수 없습니다.`)
     return
   }
   if (!confirm(`"${role.name}" 권한 그룹을 삭제하시겠습니까?`)) return
   try {
     await api.delete(`/api/admin/roles/${role.id}`)
     roles.value = roles.value.filter(r => r.id !== role.id)
-    if (selectedRole.value?.id === role.id) selectedRole.value = null
-    successMsg.value = '삭제되었습니다.'
+    if (selectedRole.value?.id === role.id) {
+      if (roles.value.length > 0) selectRole(roles.value[0])
+      else selectedRole.value = null
+    }
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || '삭제에 실패했습니다.'
   }
@@ -202,16 +179,12 @@ const initNewRole = () => {
   showCreateForm.value = true
   selectedRole.value = null
   errorMsg.value = ''
-  successMsg.value = ''
-  newRole.value = {
-    name: '',
-    description: ''
-  }
+  newRole.value = { name: '', description: '' }
 }
 
 const createRole = async () => {
   if (!newRole.value.name.trim()) {
-    errorMsg.value = 'Role 이름을 입력해주세요.'
+    alert('Role 이름을 입력해주세요.')
     return
   }
   saving.value = true
@@ -222,13 +195,12 @@ const createRole = async () => {
       {
         name: newRole.value.name,
         description: newRole.value.description,
-        programIds: [] // 처음에 프로그램 할당 안함
+        programIds: []
       }
     )
     roles.value.push(res.data)
     showCreateForm.value = false
-    selectRole(res.data) // 생성 후 바로 선택
-    successMsg.value = '새 권한 그룹이 생성되었습니다. 이제 하단에서 프로그램을 할당해보세요.'
+    selectRole(res.data)
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || '생성에 실패했습니다.'
   } finally {
@@ -255,246 +227,278 @@ const toggleAllUnassigned = (e: any) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <div class="max-w-7xl mx-auto py-8 text-sm">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-8 px-4">
-        <div>
-          <div class="flex items-center gap-2">
-            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-            <h1 class="text-2xl font-bold text-gray-900">권한 그룹(Role) 마스터 관리</h1>
-          </div>
-          <p class="text-gray-500 mt-1">시스템에서 사용할 권한 그룹을 정의하고 프로그램을 할당합니다.</p>
+  <div class="admin-page-wrap gl-fade-in">
+    <AppPageHeader 
+      title="권한 그룹(Role) 마스터 관리" 
+      subtitle="시스템에서 사용할 권한 그룹을 정의하고 프로그램을 할당합니다."
+    />
+
+    <div v-if="errorMsg" class="alert-error">
+      {{ errorMsg }}
+    </div>
+
+    <div class="role-grid">
+      <!-- 좌측: 권한 목록 -->
+      <div class="role-sidebar">
+        <div class="role-sidebar__header">
+          <h3>권한그룹 목록</h3>
+          <button @click="initNewRole" class="btn-icon-plus" title="새 권한 등록">+</button>
         </div>
+        
+        <div class="role-sidebar__col-head">
+          <span>코드</span>
+          <span>그룹명</span>
+          <span>관리</span>
+        </div>
+
+        <div v-if="loading" class="role-loading">불러오는 중...</div>
+        <ul v-else class="role-list">
+          <li
+            v-for="role in roles"
+            :key="role.id"
+            @click="selectRole(role)"
+            class="role-item"
+            :class="{ 'role-item--active': selectedRole?.id === role.id && !showCreateForm }"
+          >
+            <div class="role-item__code">{{ role.name }}</div>
+            <div class="role-item__name">{{ role.description || '-' }}</div>
+            <div class="role-item__manage">
+               <button v-if="!PROTECTED_ROLES.includes(role.name)" @click.stop="deleteRole(role)" class="btn-delete" title="삭제">
+                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+               </button>
+               <span v-else class="role-badge-default">기본권한</span>
+            </div>
+          </li>
+        </ul>
       </div>
 
-      <!-- Alerts -->
-      <div v-if="errorMsg" class="mx-4 mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
-        {{ errorMsg }}
-      </div>
-      <div v-if="successMsg" class="mx-4 mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md">
-        {{ successMsg }}
-      </div>
+      <!-- 우측: 상세 / 할당 관리 -->
+      <div class="role-content">
+        
+        <!-- 새 Role 생성 폼 -->
+        <AppCard v-if="showCreateForm" class="create-card">
+          <h2 class="create-card__title">새 권한그룹 생성</h2>
+          <div class="create-grid">
+            <AppInput v-model="newRole.name" label="권한그룹 코드 (영문)" placeholder="예: CUSTOMER_CS" />
+            <AppInput v-model="newRole.description" label="권한그룹 설명" placeholder="예: CS 담당자" />
+          </div>
+          <div class="create-actions">
+            <AppButton variant="secondary" @click="showCreateForm = false">취소</AppButton>
+            <AppButton variant="primary" @click="createRole" :disabled="saving || !newRole.name">{{ saving ? '저장중' : '생성하기' }}</AppButton>
+          </div>
+        </AppCard>
 
-      <div class="flex flex-col md:flex-row gap-4 px-4 items-start">
-        <!-- Role 목록 (좌측) -->
-        <div class="w-full md:w-64 flex-shrink-0">
-          <div class="bg-white rounded-md border border-gray-300 overflow-hidden">
-            <div class="px-4 py-3 bg-gray-50 border-b border-gray-300 flex justify-between items-center">
-              <h2 class="font-bold text-gray-800">권한그룹 목록</h2>
-              <button @click="initNewRole" class="text-blue-500 hover:text-blue-700 w-6 h-6 flex items-center justify-center bg-blue-50 rounded-full">+</button>
+        <div v-else-if="!selectedRole" class="empty-state-box">
+          <p>좌측에서 권한그룹을 선택해주세요.</p>
+        </div>
+
+        <div v-else class="role-tables">
+          <!-- 상단: 부여된 프로그램 -->
+          <AppCard class="table-card">
+            <div class="table-card__header">
+              <h3 class="table-card__title text-primary">부여된 프로그램 내역</h3>
+              <div class="table-card__toolbar">
+                <div class="table-filters">
+                  <select v-model="assignFilterCat1" class="filter-select"><option value="">대분류 전체</option><option v-for="c in uniqueCategories1" :key="c" :value="c">{{ c }}</option></select>
+                  <select v-model="assignFilterCat2" class="filter-select"><option value="">중분류 전체</option><option v-for="c in uniqueCategories2" :key="c" :value="c">{{ c }}</option></select>
+                  <select v-model="assignFilterType" class="filter-select"><option value="">유형 전체</option><option value="WEB">WEB</option><option value="API">API</option></select>
+                  <input v-model="assignFilterKeyword" class="filter-input" placeholder="검색" />
+                </div>
+                <!-- 선택 회수 버튼 -->
+                <button class="btn-danger-outline" @click="removeSelectedPrograms" :disabled="checkedAssignedIds.length === 0">선택 ↙ 회수</button>
+              </div>
             </div>
             
-            <div class="grid grid-cols-3 bg-gray-50 text-xs font-bold text-center py-2 border-b border-gray-200 text-gray-600">
-              <div class="col-span-1">코드</div>
-              <div class="col-span-1">그룹명</div>
-              <div class="col-span-1">관리</div>
+            <div class="table-wrap custom-scroll">
+              <table class="gl-table text-center">
+                <thead class="sticky-thead">
+                  <tr>
+                    <th style="width: 48px;"><input type="checkbox" @change="toggleAllAssigned" /></th>
+                    <th>대분류</th>
+                    <th>중분류</th>
+                    <th>유형</th>
+                    <th>프로그램ID</th>
+                    <th>프로그램명</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="filteredAssignedPrograms.length === 0">
+                    <td colspan="6" class="empty-msg">부여된 프로그램이 없거나 검색 결과가 없습니다.</td>
+                  </tr>
+                  <tr v-for="prog in filteredAssignedPrograms" :key="prog.id">
+                    <td><input type="checkbox" :value="prog.id" v-model="checkedAssignedIds" /></td>
+                    <td class="text-muted">{{ prog.category1 || '-' }}</td>
+                    <td class="text-muted">{{ prog.category2 || '-' }}</td>
+                    <td><AppBadge :variant="prog.type === 'WEB' ? 'primary' : 'success'">{{ prog.type }}</AppBadge></td>
+                    <td class="font-mono text-primary">{{ prog.programCode }}</td>
+                    <td class="font-medium">{{ prog.name }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
+          </AppCard>
 
-            <div v-if="loading" class="p-6 text-center text-gray-400">불러오는 중...</div>
-            <ul v-else class="divide-y divide-gray-200">
-              <li
-                v-for="role in roles"
-                :key="role.id"
-                @click="selectRole(role)"
-                class="grid grid-cols-3 items-center text-center py-2 cursor-pointer hover:bg-blue-50 transition-colors"
-                :class="{ 'bg-blue-50 border-l-4 border-blue-500': selectedRole?.id === role.id }"
-              >
-                <div class="col-span-1 font-bold text-gray-800">{{ role.name }}</div>
-                <div class="col-span-1 text-gray-600">{{ role.description || '-' }}</div>
-                <div class="col-span-1 flex justify-center gap-2">
-                   <button v-if="!PROTECTED_ROLES.includes(role.name)" @click.stop="deleteRole(role)" class="text-gray-400 hover:text-red-500">
-                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                   </button>
-                   <span v-else class="text-gray-300 px-1 text-[10px]">기본권한</span>
+          <!-- 하단: 미부여(할당 가능) 프로그램 -->
+          <AppCard class="table-card">
+            <div class="table-card__header">
+              <h3 class="table-card__title">미부여 (할당 가능한 프로그램)</h3>
+              <div class="table-card__toolbar">
+                <div class="table-filters">
+                  <select v-model="filterCategory1" class="filter-select"><option value="">대분류 전체</option><option v-for="c in uniqueCategories1" :key="c" :value="c">{{ c }}</option></select>
+                  <select v-model="filterCategory2" class="filter-select"><option value="">중분류 전체</option><option v-for="c in uniqueCategories2" :key="c" :value="c">{{ c }}</option></select>
+                  <select v-model="filterType" class="filter-select"><option value="">유형 전체</option><option value="WEB">WEB</option><option value="API">API</option></select>
+                  <input v-model="filterKeyword" class="filter-input" placeholder="검색" />
                 </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- 우측: Role 상세 or 생성 폼 -->
-        <div class="flex-1 w-full flex flex-col gap-4">
-          
-          <!-- 새 Role 생성 폼 -->
-          <div v-if="showCreateForm" class="bg-white rounded-md border border-gray-300 p-6">
-            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">새 권한그룹 생성</h2>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">권한그룹 코드 (영문)</label>
-                <input v-model="newRole.name" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" placeholder="예: CUSTOMER_CS" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">권한그룹 설명</label>
-                <input v-model="newRole.description" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" placeholder="예: CS 담당자" />
+                <!-- 선택 부여 버튼 -->
+                <button class="btn-primary-outline" @click="assignSelectedPrograms" :disabled="checkedAllIds.length === 0">선택 ↗ 부여</button>
               </div>
             </div>
-            <div class="flex justify-end gap-2">
-              <button @click="showCreateForm = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded font-medium hover:bg-gray-300">취소</button>
-              <button @click="createRole" :disabled="saving" class="px-4 py-2 bg-blue-800 text-white rounded font-medium hover:bg-blue-900">{{ saving ? '저장중' : '생성하기' }}</button>
-            </div>
-          </div>
-
-          <!-- Role 선택 안된 빈 화면 -->
-          <div v-else-if="!selectedRole" class="bg-white rounded-md border border-gray-300 flex-1 flex items-center justify-center min-h-[400px]">
-            <p class="text-gray-400">좌측에서 권한그룹을 선택해주세요.</p>
-          </div>
-
-          <!-- Role 관리 폼 -->
-          <div v-else class="flex flex-col gap-4">
             
-            <!-- 위쪽 표: 부여된 프로그램 -->
-            <div class="bg-white rounded-md border border-gray-300 overflow-hidden relative">
-              <div class="p-3 bg-white flex flex-col gap-3 border-b border-gray-300">
-                <div class="flex justify-between items-center">
-                  <h2 class="font-bold text-blue-600">부여된 프로그램 목록</h2>
-                </div>
-                <!-- Filter Bar -->
-                <div class="flex items-center justify-between text-xs px-2 mb-2">
-                  <button @click="removeSelectedPrograms" :disabled="checkedAssignedIds.length === 0" class="px-4 py-1.5 bg-red-700 disabled:bg-red-300 text-white rounded font-bold hover:bg-red-800 transition">선택삭제</button>
-                  
-                  <div class="flex items-center gap-2">
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">대분류</span>
-                      <select v-model="assignFilterCat1" class="border border-gray-300 rounded p-1 w-24">
-                        <option value="">전체보기</option>
-                        <option v-for="cat in uniqueCategories1" :key="cat" :value="cat">{{ cat }}</option>
-                      </select>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">중분류</span>
-                      <select v-model="assignFilterCat2" class="border border-gray-300 rounded p-1 w-24">
-                        <option value="">전체보기</option>
-                        <option v-for="cat in uniqueCategories2" :key="cat" :value="cat">{{ cat }}</option>
-                      </select>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">유형</span>
-                      <select v-model="assignFilterType" class="border border-gray-300 rounded p-1 w-24">
-                        <option value="">전체보기</option>
-                        <option value="WEB">WEB</option>
-                        <option value="API">API</option>
-                      </select>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">프로그램명</span>
-                      <input v-model="assignFilterKeyword" class="border border-gray-300 rounded p-1 w-32" placeholder="검색" />
-                    </div>
-                    <button class="px-3 py-1.5 bg-[#1e293b] text-white rounded hover:bg-slate-700 transition font-medium">조회</button>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="max-h-[300px] overflow-y-auto">
-                <table class="w-full text-center">
-                  <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10 font-bold text-gray-600">
-                    <tr>
-                      <th class="py-2 w-10"><input type="checkbox" @change="toggleAllAssigned" /></th>
-                      <th class="py-2">대분류</th>
-                      <th class="py-2">중분류</th>
-                      <th class="py-2">유형</th>
-                      <th class="py-2">ID</th>
-                      <th class="py-2">프로그램명</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-if="filteredAssignedPrograms.length === 0">
-                      <td colspan="6" class="py-8 text-gray-400">부여된 프로그램이 없습니다.</td>
-                    </tr>
-                    <tr v-for="prog in filteredAssignedPrograms" :key="prog.id" class="hover:bg-gray-50">
-                      <td class="py-2"><input type="checkbox" :value="prog.id" v-model="checkedAssignedIds" /></td>
-                      <td class="py-2">{{ prog.category1 || '-' }}</td>
-                      <td class="py-2">{{ prog.category2 || '-' }}</td>
-                      <td class="py-2">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="prog.type === 'WEB' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'">{{ prog.type }}</span>
-                      </td>
-                      <td class="py-2 font-mono text-gray-500">{{ prog.programCode }}</td>
-                      <td class="py-2 font-medium">{{ prog.name }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+            <div class="table-wrap custom-scroll">
+              <table class="gl-table text-center">
+                <thead class="sticky-thead">
+                  <tr>
+                    <th style="width: 48px;"><input type="checkbox" @change="toggleAllUnassigned" /></th>
+                    <th>대분류</th>
+                    <th>중분류</th>
+                    <th>유형</th>
+                    <th>프로그램ID</th>
+                    <th>프로그램명</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="unassignedPrograms.length === 0">
+                    <td colspan="6" class="empty-msg">할당 가능한 프로그램이 없거나 검색 결과가 없습니다.</td>
+                  </tr>
+                  <tr v-for="prog in unassignedPrograms" :key="prog.id">
+                    <td><input type="checkbox" :value="prog.id" v-model="checkedAllIds" /></td>
+                    <td class="text-muted">{{ prog.category1 || '-' }}</td>
+                    <td class="text-muted">{{ prog.category2 || '-' }}</td>
+                    <td><AppBadge :variant="prog.type === 'WEB' ? 'primary' : 'success'">{{ prog.type }}</AppBadge></td>
+                    <td class="font-mono text-primary font-bold">{{ prog.programCode }}</td>
+                    <td class="font-medium">{{ prog.name }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
+          </AppCard>
 
-            <!-- 아래쪽 표: 전체 프로그램 목록 -->
-            <div class="bg-white rounded-md border border-gray-300 overflow-hidden relative mt-2">
-              <div class="p-3 bg-white flex flex-col gap-3 border-b border-gray-300">
-                <div class="flex justify-between items-center">
-                  <h2 class="font-bold text-blue-600">전체 프로그램 목록</h2>
-                </div>
-                <!-- Filter Bar -->
-                <div class="flex items-center justify-between text-xs px-2 mb-2">
-                  <button @click="assignSelectedPrograms" :disabled="checkedAllIds.length === 0" class="px-4 py-1.5 bg-blue-700 disabled:bg-blue-300 text-white rounded font-bold hover:bg-blue-800 transition">선택부여</button>
-                  
-                  <div class="flex items-center gap-2">
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">대분류</span>
-                      <select v-model="filterCategory1" class="border border-gray-300 rounded p-1 w-24">
-                        <option value="">전체보기</option>
-                        <option v-for="cat in uniqueCategories1" :key="cat" :value="cat">{{ cat }}</option>
-                      </select>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">중분류</span>
-                      <select v-model="filterCategory2" class="border border-gray-300 rounded p-1 w-24">
-                        <option value="">전체보기</option>
-                        <option v-for="cat in uniqueCategories2" :key="cat" :value="cat">{{ cat }}</option>
-                      </select>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">유형</span>
-                      <select v-model="filterType" class="border border-gray-300 rounded p-1 w-24">
-                        <option value="">전체보기</option>
-                        <option value="WEB">WEB</option>
-                        <option value="API">API</option>
-                      </select>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-600 font-bold">프로그램명</span>
-                      <input v-model="filterKeyword" class="border border-gray-300 rounded p-1 w-32" placeholder="검색" />
-                    </div>
-                    <button class="px-3 py-1.5 bg-[#1e293b] text-white rounded hover:bg-slate-700 transition font-medium">조회</button>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="max-h-[300px] overflow-y-auto">
-                <table class="w-full text-center">
-                  <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10 font-bold text-gray-600">
-                    <tr>
-                      <th class="py-2 w-10"><input type="checkbox" @change="toggleAllUnassigned" /></th>
-                      <th class="py-2">대분류</th>
-                      <th class="py-2">중분류</th>
-                      <th class="py-2">유형</th>
-                      <th class="py-2">ID</th>
-                      <th class="py-2">프로그램명</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-if="unassignedPrograms.length === 0">
-                      <td colspan="6" class="py-8 text-gray-400">할당 가능한 대상 프로그램이 없습니다.</td>
-                    </tr>
-                    <tr v-for="prog in unassignedPrograms" :key="prog.id" class="hover:bg-gray-50">
-                      <td class="py-2"><input type="checkbox" :value="prog.id" v-model="checkedAllIds" /></td>
-                      <td class="py-2">{{ prog.category1 || '-' }}</td>
-                      <td class="py-2">{{ prog.category2 || '-' }}</td>
-                      <td class="py-2">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="prog.type === 'WEB' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'">{{ prog.type }}</span>
-                      </td>
-                      <td class="py-2 font-mono text-blue-500 font-bold">{{ prog.programCode }}</td>
-                      <td class="py-2 font-medium">{{ prog.name }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
         </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Scoped styles overrides can go here */
+.admin-page-wrap {
+  padding: 2rem 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.alert-error {
+  background: #FFF0F0; border: 1px solid #FECACA; color: var(--color-danger); padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 500; margin-bottom: 1.5rem;
+}
+
+.role-grid {
+  display: flex; gap: 1.5rem; align-items: flex-start;
+}
+@media (max-width: 900px) {
+  .role-grid { flex-direction: column; }
+}
+
+/* Sidebar */
+.role-sidebar {
+  width: 320px; flex-shrink: 0; background: white; border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); overflow: hidden;
+}
+@media (max-width: 900px) { .role-sidebar { width: 100%; } }
+
+.role-sidebar__header {
+  padding: 1rem 1.25rem; background: #FAFBFD; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;
+}
+.role-sidebar__header h3 { font-size: 0.9375rem; font-weight: 800; color: var(--color-navy); }
+.btn-icon-plus {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); font-size: 1.125rem; font-weight: 700; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all 0.1s;
+}
+.btn-icon-plus:hover { background: var(--color-primary); color: white; }
+
+.role-sidebar__col-head {
+  display: grid; grid-template-columns: 1.2fr 1fr 60px; text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--color-text-secondary); padding: 0.5rem 1rem; border-bottom: 1px solid var(--color-border); background: #F8FAFC;
+}
+
+.role-loading { padding: 3rem; text-align: center; font-size: 0.875rem; color: var(--color-text-muted); }
+
+.role-list { list-style: none; padding: 0; margin: 0; max-height: 700px; overflow-y: auto; }
+.role-item {
+  display: grid; grid-template-columns: 1.2fr 1fr 60px; text-align: center; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-border); cursor: pointer; transition: background 0.1s;
+}
+.role-item:hover { background: #F1F5F9; }
+.role-item--active { background: var(--color-primary-light); border-left: 3px solid var(--color-primary); }
+
+.role-item__code { font-size: 0.8125rem; font-weight: 700; color: var(--color-navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding-left: 0.25rem; }
+.role-item__name { font-size: 0.75rem; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.role-item__manage { display: flex; justify-content: center;}
+
+.btn-delete { background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.25rem; transition: color 0.1s; display: flex; }
+.btn-delete:hover { color: var(--color-danger); }
+.role-badge-default { background: var(--color-border); color: var(--color-text-secondary); font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.4rem; border-radius: 4px; }
+
+
+/* Content */
+.role-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
+
+.create-card { padding: 1.5rem; }
+.create-card__title { font-size: 1.125rem; font-weight: 800; color: var(--color-navy); margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; }
+.create-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.create-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+.empty-state-box { background: white; border-radius: var(--radius-lg); border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; min-height: 400px; color: var(--color-text-muted); font-size: 0.9375rem; }
+
+/* Tables */
+.role-tables { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.table-card { padding: 0; overflow: hidden; }
+.table-card__header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border); display: flex; gap: 1rem; justify-content: space-between; align-items: center; }
+@media (max-width: 1100px) { .table-card__header { flex-direction: column; align-items: flex-start; gap: 0.75rem; } }
+
+.table-card__title { font-size: 0.9375rem; font-weight: 800; color: var(--color-navy); }
+.text-primary { color: var(--color-primary); }
+
+.table-card__toolbar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.table-filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.filter-select { padding: 0.4rem 0.6rem; border: 1px solid var(--color-border); border-radius: 4px; font-size: 0.75rem; background: #F8FAFC; outline: none; }
+.filter-select:focus { border-color: var(--color-primary); }
+.filter-input { padding: 0.4rem 0.6rem; border: 1px solid var(--color-border); border-radius: 4px; font-size: 0.75rem; outline: none; width: 120px; }
+
+.btn-primary-outline, .btn-danger-outline {
+  padding: 0.5rem 1rem; font-size: 0.8125rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.1s; display: flex; align-items: center; font-family: inherit;
+}
+.btn-primary-outline { border: 1px solid var(--color-primary); color: var(--color-primary); background: transparent; }
+.btn-primary-outline:hover:not(:disabled) { background: var(--color-primary); color: white; }
+.btn-primary-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-danger-outline { border: 1px solid var(--color-danger); color: var(--color-danger); background: transparent; }
+.btn-danger-outline:hover:not(:disabled) { background: var(--color-danger); color: white; }
+.btn-danger-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+
+.table-wrap { width: 100%; overflow-x: auto; max-height: 380px; }
+.custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+
+.gl-table { width: 100%; border-collapse: collapse; text-align: left; }
+.gl-table th { padding: 0.875rem 1rem; font-size: 0.8125rem; font-weight: 700; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); background: #FAFBFD; white-space: nowrap; }
+.gl-table td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; color: var(--color-navy); vertical-align: middle; }
+.gl-table tr:last-child td { border-bottom: none; }
+.gl-table tr:hover td { background: #F8FAFC; }
+.sticky-thead { position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 0 var(--color-border); }
+
+.text-center th, .text-center td { text-align: center; }
+.text-muted { color: var(--color-text-secondary); font-size: 0.8125rem; }
+.font-bold { font-weight: 700; }
+.font-medium { font-weight: 500; }
+.font-mono { font-family: monospace; font-size: 0.8125rem; }
+.empty-msg { padding: 3rem !important; color: var(--color-text-muted) !important; font-size: 0.875rem; }
 </style>

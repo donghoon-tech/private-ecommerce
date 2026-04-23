@@ -1,199 +1,13 @@
-<template>
-  <div class="container mx-auto px-4 py-8">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-3xl font-bold">사용자 관리</h1>
-    </div>
-    
-    <!-- Tabs -->
-    <div class="mb-6 border-b">
-      <nav class="-mb-px flex space-x-8">
-        <button 
-          @click="activeTab = 'all'" 
-          :class="[
-            'py-4 px-1 border-b-2 font-medium text-sm',
-            activeTab === 'all' 
-              ? 'border-indigo-500 text-indigo-600' 
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          ]"
-        >
-          전체 사용자
-        </button>
-        <button 
-          @click="activeTab = 'PENDING'" 
-          :class="[
-            'py-4 px-1 border-b-2 font-medium text-sm',
-            activeTab === 'PENDING' 
-              ? 'border-indigo-500 text-indigo-600' 
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          ]"
-        >
-          가입 대기 중 <span v-if="pendingCount > 0" class="ml-1 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">{{ pendingCount }}</span>
-        </button>
-      </nav>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12">
-      <p class="text-gray-500">로딩 중...</p>
-    </div>
-
-    <!-- User Table -->
-    <div v-else class="bg-white shadow rounded-lg overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">사용자명</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">아이디</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">회사명</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연락처</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">역할</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr 
-            v-for="user in paginatedUsers" 
-            :key="user.id"
-            @click="openDetail(user)"
-            class="hover:bg-gray-50 cursor-pointer transition"
-          >
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.name }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.username }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.companyName || '-' }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.representativePhone }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">{{ user.roleDescription || user.role }}</span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span 
-                :class="[
-                  'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
-                  user.businessStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                  user.businessStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                  user.businessStatus === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                ]"
-              >
-                {{ getStatusText(user.businessStatus) }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div v-if="filteredUsers.length === 0" class="text-center py-12">
-        <p class="text-gray-500">{{ activeTab === 'PENDING' ? '대기 중인 사용자가 없습니다.' : '사용자가 없습니다.' }}</p>
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="filteredUsers.length > 0" class="bg-gray-50 px-4 py-3 flex items-center justify-center border-t border-gray-200 sm:px-6">
-        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-          <button 
-            @click="currentPage--" 
-            :disabled="currentPage === 1"
-            class="relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            이전
-          </button>
-          <button 
-            v-for="page in displayPages" 
-            :key="page"
-            @click="currentPage = page"
-            :class="[
-              'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
-              page === currentPage 
-                ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600' 
-                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-            ]"
-          >
-            {{ page }}
-          </button>
-          <button 
-            @click="currentPage++" 
-            :disabled="currentPage === totalPages"
-            class="relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            다음
-          </button>
-        </nav>
-        <p class="ml-4 text-sm text-gray-700">
-          전체 <span class="font-medium">{{ filteredUsers.length }}</span>개 중 
-          <span class="font-medium">{{ (currentPage - 1) * pageSize + 1 }}</span>-<span class="font-medium">{{ Math.min(currentPage * pageSize, filteredUsers.length) }}</span> 표시
-        </p>
-      </div>
-    </div>
-
-    <!-- 사용자 상세 사이드 패널 -->
-    <RightPanel
-      :is-open="userDetailOpen"
-      :title="selectedUser ? `${selectedUser.name} 상세 정보` : '사용자 정보'"
-      subtitle="사용자의 기본 정보 및 가입 승인 상태를 관리합니다."
-      @close="userDetailOpen = false"
-    >
-      <div v-if="selectedUser" class="space-y-6">
-        <div class="bg-gray-50 p-4 rounded-lg space-y-4">
-          <h3 class="text-sm font-bold text-gray-900 border-b pb-2">기본 정보</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">아이디</label>
-              <div class="text-sm font-medium">{{ selectedUser.username }}</div>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">이름</label>
-              <div class="text-sm font-medium">{{ selectedUser.name }}</div>
-            </div>
-            <div class="col-span-2">
-              <label class="block text-xs text-gray-500 mb-1">이메일</label>
-              <div class="text-sm font-medium">{{ selectedUser.email || '-' }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gray-50 p-4 rounded-lg space-y-4">
-          <h3 class="text-sm font-bold text-gray-900 border-b pb-2">회사 및 권한</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2">
-              <label class="block text-xs text-gray-500 mb-1">회사명</label>
-              <div class="text-sm font-medium">{{ selectedUser.companyName || '-' }}</div>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">역할</label>
-              <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">{{ selectedUser.roleDescription || selectedUser.role }}</span>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">상태</label>
-              <span 
-                :class="[
-                  'px-2 py-0.5 text-xs font-bold rounded-full',
-                  selectedUser.businessStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                  selectedUser.businessStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                  selectedUser.businessStatus === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                ]"
-              >
-                {{ getStatusText(selectedUser.businessStatus) }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="selectedUser.businessStatus === 'PENDING'" class="flex gap-2 pt-4">
-          <button @click="approveUser" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">가입 승인</button>
-          <button @click="rejectUser" class="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition">가입 반려</button>
-        </div>
-      </div>
-      <template #footer>
-        <button @click="userDetailOpen = false" class="px-6 py-2 border border-gray-300 rounded-lg text-sm font-bold hover:bg-gray-50">닫기</button>
-      </template>
-    </RightPanel>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api'
 import RightPanel from '../../components/RightPanel.vue'
+import AppPageHeader from '../../components/ui/AppPageHeader.vue'
+import AppCard from '../../components/ui/AppCard.vue'
+import AppBadge from '../../components/ui/AppBadge.vue'
+import AppButton from '../../components/ui/AppButton.vue'
+import AppEmptyState from '../../components/ui/AppEmptyState.vue'
 
 const router = useRouter()
 
@@ -240,7 +54,7 @@ const paginatedUsers = computed(() => {
 })
 
 const displayPages = computed(() => {
-  const pages = []
+  const pages: number[] = []
   const maxDisplay = 5
   let startPage = Math.max(1, currentPage.value - Math.floor(maxDisplay / 2))
   let endPage = Math.min(totalPages.value, startPage + maxDisplay - 1)
@@ -265,6 +79,14 @@ const getStatusText = (status?: string) => {
     case 'PENDING': return '대기중'
     case 'REJECTED': return '반려됨'
     default: return '미등록'
+  }
+}
+const getStatusVariant = (status?: string) => {
+  switch (status) {
+    case 'APPROVED': return 'success'
+    case 'PENDING': return 'warning'
+    case 'REJECTED': return 'danger'
+    default: return 'secondary'
   }
 }
 
@@ -312,4 +134,215 @@ onMounted(() => {
 })
 </script>
 
+<template>
+  <div class="admin-page-wrap gl-fade-in">
+    <!-- Header -->
+    <AppPageHeader 
+      title="사용자 관리" 
+      subtitle="가입된 사용자 및 사업자 승인 대기 상태를 관리합니다."
+    />
 
+    <div class="admin-toolbar">
+      <div class="admin-tabs">
+        <button
+          class="admin-tab"
+          :class="{ 'admin-tab--active': activeTab === 'all' }"
+          @click="activeTab = 'all'; currentPage = 1"
+        >
+          전체 사용자
+        </button>
+        <button
+          class="admin-tab"
+          :class="{ 'admin-tab--active': activeTab === 'PENDING' }"
+          @click="activeTab = 'PENDING'; currentPage = 1"
+        >
+          가입 대기 중
+          <span v-if="pendingCount > 0" class="admin-tab-badge">{{ pendingCount }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Table Card -->
+    <AppCard>
+      <div v-if="loading" style="text-align: center; padding: 3rem 0; color: var(--color-text-muted);">
+        데이터를 불러오는 중입니다...
+      </div>
+      <div v-else>
+        <div class="gl-table-wrap">
+          <table class="gl-table">
+            <thead>
+              <tr>
+                <th>사용자명</th>
+                <th>아이디</th>
+                <th>회사명</th>
+                <th>연락처</th>
+                <th>역할</th>
+                <th class="text-center">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="user in paginatedUsers" 
+                :key="user.id"
+                class="hover-row"
+                @click="openDetail(user)"
+              >
+                <td class="font-bold">{{ user.name }}</td>
+                <td class="text-muted">{{ user.username }}</td>
+                <td class="text-muted">{{ user.companyName || '-' }}</td>
+                <td class="text-muted">{{ user.representativePhone }}</td>
+                <td>
+                  <AppBadge variant="primary">{{ user.roleDescription || user.role }}</AppBadge>
+                </td>
+                <td class="text-center">
+                  <AppBadge :variant="getStatusVariant(user.businessStatus)">
+                    {{ getStatusText(user.businessStatus) }}
+                  </AppBadge>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <AppEmptyState 
+          v-if="filteredUsers.length === 0" 
+          :title="activeTab === 'PENDING' ? '대기 중인 사용자가 없습니다.' : '사용자가 없습니다.'" 
+        />
+
+        <!-- Pagination -->
+        <div v-if="filteredUsers.length > 0" class="admin-pagination">
+          <button class="admin-page-btn" @click="currentPage--" :disabled="currentPage === 1">이전</button>
+          <button 
+            v-for="page in displayPages" 
+            :key="page"
+            class="admin-page-btn"
+            :class="{ 'admin-page-btn--active': currentPage === page }"
+            @click="currentPage = page"
+          >
+            {{ page }}
+          </button>
+          <button class="admin-page-btn" @click="currentPage++" :disabled="currentPage === totalPages">다음</button>
+        </div>
+        <p v-if="filteredUsers.length > 0" class="pagination-info">
+          전체 <strong>{{ filteredUsers.length }}</strong>개 중 
+          <strong>{{ (currentPage - 1) * pageSize + 1 }}</strong>-<strong>{{ Math.min(currentPage * pageSize, filteredUsers.length) }}</strong> 표시
+        </p>
+      </div>
+    </AppCard>
+
+    <!-- Detail Panel -->
+    <RightPanel
+      :is-open="userDetailOpen"
+      :title="selectedUser ? `${selectedUser.name} 상세 정보` : '사용자 정보'"
+      subtitle="사용자의 기본 정보 및 가입 승인 상태를 관리합니다."
+      @close="userDetailOpen = false"
+    >
+      <div v-if="selectedUser" class="detail-grid">
+        <div class="detail-section">
+          <h3 class="detail-section__title">기본 정보</h3>
+          <div class="detail-row">
+            <div class="detail-col">
+              <label>아이디</label>
+              <p>{{ selectedUser.username }}</p>
+            </div>
+            <div class="detail-col">
+              <label>이름</label>
+              <p>{{ selectedUser.name }}</p>
+            </div>
+          </div>
+          <div class="detail-col" style="margin-top:0.75rem;">
+            <label>이메일</label>
+            <p>{{ selectedUser.email || '-' }}</p>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3 class="detail-section__title">회사 및 권한</h3>
+          <div class="detail-col" style="margin-bottom:0.75rem;">
+            <label>회사명</label>
+            <p>{{ selectedUser.companyName || '-' }}</p>
+          </div>
+          <div class="detail-row">
+            <div class="detail-col">
+              <label>역할</label>
+              <p><AppBadge variant="primary">{{ selectedUser.roleDescription || selectedUser.role }}</AppBadge></p>
+            </div>
+            <div class="detail-col">
+              <label>상태</label>
+              <p><AppBadge :variant="getStatusVariant(selectedUser.businessStatus)">{{ getStatusText(selectedUser.businessStatus) }}</AppBadge></p>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedUser.businessStatus === 'PENDING'" class="detail-actions">
+          <AppButton block variant="primary" @click="approveUser">가입 승인</AppButton>
+          <AppButton block variant="outline" @click="rejectUser">가입 반려</AppButton>
+        </div>
+      </div>
+    </RightPanel>
+  </div>
+</template>
+
+<style scoped>
+.admin-page-wrap {
+  padding: 2rem 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.admin-toolbar {
+  display: flex;
+  margin-bottom: 1.5rem;
+  margin-top: 1rem;
+}
+.admin-tabs {
+  display: flex; background: white; padding: 0.25rem; border-radius: var(--radius-md); box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid var(--color-border); gap: 0.25rem;
+}
+.admin-tab {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem; font-weight: 600; color: var(--color-text-secondary);
+  border-radius: var(--radius-sm); border: none; background: transparent; cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; gap: 0.375rem;
+}
+.admin-tab:hover { color: var(--color-navy); }
+.admin-tab--active { background: var(--color-primary); color: white !important; }
+
+.admin-tab-badge { background: #FF4D4F; color: white; border-radius: 999px; padding: 0.1rem 0.4rem; font-size: 0.7rem; font-weight: 800; min-width: 1.25rem; text-align: center; }
+
+/* Table */
+.gl-table-wrap { width: 100%; overflow-x: auto; }
+.gl-table { width: 100%; border-collapse: collapse; text-align: left; }
+.gl-table th { padding: 1rem; font-size: 0.875rem; font-weight: 700; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); background: #FAFBFD; white-space: nowrap; }
+.gl-table td { padding: 1.125rem 1rem; border-bottom: 1px solid var(--color-border); font-size: 0.9rem; color: var(--color-navy); vertical-align: middle; }
+.gl-table tr:last-child td { border-bottom: none; }
+.hover-row { cursor: pointer; transition: background 0.1s; }
+.hover-row:hover td { background: #F8FAFC; }
+
+.font-bold { font-weight: 700; }
+.text-muted { color: var(--color-text-secondary); }
+.text-center { text-align: center; }
+
+/* Pagination */
+.admin-pagination { display: flex; justify-content: center; gap: 0.25rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border); }
+.admin-page-btn {
+  min-width: 38px; height: 36px; padding: 0 0.5rem; border: 1px solid var(--color-border); background: white; border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 600; color: var(--color-text-secondary); cursor: pointer; transition: all 0.1s;
+}
+.admin-page-btn:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+.admin-page-btn--active { background: var(--color-primary); border-color: var(--color-primary); color: white !important; font-weight: 700; }
+.admin-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pagination-info { text-align: center; font-size: 0.8125rem; color: var(--color-text-muted); margin-top: 0.75rem; }
+
+/* Side Panel Detail */
+.detail-grid { display: flex; flex-direction: column; gap: 1.25rem; }
+.detail-section { background: #F8FAFC; border-radius: var(--radius-lg); padding: 1.25rem; border: 1px solid var(--color-border); }
+.detail-section__title { font-size: 0.875rem; font-weight: 800; color: var(--color-navy); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border); }
+
+.detail-row { display: flex; gap: 1rem; }
+.detail-col { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+.detail-col label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); }
+.detail-col p { font-size: 0.9375rem; font-weight: 600; color: var(--color-navy); }
+
+.detail-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+</style>

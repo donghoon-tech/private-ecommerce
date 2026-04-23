@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 import { useRecentStore } from '../stores/recent'
 import { useWishlistStore } from '../stores/wishlist'
+import AppButton from '../components/ui/AppButton.vue'
+import AppBadge from '../components/ui/AppBadge.vue'
 
 interface Product {
   id: string
@@ -22,371 +24,681 @@ const product = ref<Product | null>(null)
 const selectedImageIndex = ref(0)
 const quantity = ref(1)
 
-// Cart & Wishlist Stores
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
 
-// Cart conflict detection
 const currentCartSeller = computed(() => {
-    return cartStore.items.length > 0 ? cartStore.items[0].sellerName : null
+  return cartStore.items.length > 0 ? cartStore.items[0].sellerName : null
 })
 const currentCartItemCount = computed(() => {
-    return cartStore.items.reduce((sum, item) => sum + item.quantity, 0)
+  return cartStore.items.reduce((sum, item) => sum + item.quantity, 0)
 })
 const hasCartConflict = computed(() => {
-    if (!product.value || !currentCartSeller.value) return false
-    return currentCartSeller.value !== product.value.sellerName
+  if (!product.value || !currentCartSeller.value) return false
+  return currentCartSeller.value !== product.value.sellerName
 })
 
-// Mock data helpers
 const mockImages = computed(() => {
-    if (!product.value) return []
-    // Use backend images if available, otherwise generate mock images
-    if (product.value.imageUrls && product.value.imageUrls.length > 0) {
-        return product.value.imageUrls
-    }
-    // Generate 4 stable random images based on product ID logic
-    const baseId = product.value.id.charCodeAt(product.value.id.length - 1)
-    return [
-        `https://picsum.photos/600/600?random=${baseId}`,
-        `https://picsum.photos/600/600?random=${baseId + 1}`,
-        `https://picsum.photos/600/600?random=${baseId + 2}`,
-        `https://picsum.photos/600/600?random=${baseId + 3}`,
-    ]
+  if (!product.value) return []
+  if (product.value.imageUrls && product.value.imageUrls.length > 0) {
+    return product.value.imageUrls
+  }
+  const baseId = product.value.id.charCodeAt(product.value.id.length - 1)
+  return [
+    `https://picsum.photos/600/600?random=${baseId}`,
+    `https://picsum.photos/600/600?random=${baseId + 1}`,
+    `https://picsum.photos/600/600?random=${baseId + 2}`,
+    `https://picsum.photos/600/600?random=${baseId + 3}`,
+  ]
 })
 
 const selectedImage = computed(() => {
-    if (mockImages.value.length === 0) return ''
-    return mockImages.value[selectedImageIndex.value]
+  if (mockImages.value.length === 0) return ''
+  return mockImages.value[selectedImageIndex.value]
 })
 
 const nextImage = () => {
-    if (mockImages.value.length === 0) return
-    selectedImageIndex.value = (selectedImageIndex.value + 1) % mockImages.value.length
+  if (mockImages.value.length === 0) return
+  selectedImageIndex.value = (selectedImageIndex.value + 1) % mockImages.value.length
 }
-
 const prevImage = () => {
-    if (mockImages.value.length === 0) return
-    selectedImageIndex.value = (selectedImageIndex.value - 1 + mockImages.value.length) % mockImages.value.length
+  if (mockImages.value.length === 0) return
+  selectedImageIndex.value = (selectedImageIndex.value - 1 + mockImages.value.length) % mockImages.value.length
 }
 
 const sellerProducts = ref([
-    { id: '101', name: '고강도 시스템 강관 A급', price: 12000, img: 'https://picsum.photos/300/300?random=101' },
-    { id: '102', name: '안전 발판 400*1829', price: 8500, img: 'https://picsum.photos/300/300?random=102' },
-    { id: '103', name: '연결핀 (50개입)', price: 45000, img: 'https://picsum.photos/300/300?random=103' },
-    { id: '104', name: '클램프 자동/구리스', price: 3200, img: 'https://picsum.photos/300/300?random=104' },
-    { id: '105', name: '파이프 행거 (대)', price: 7000, img: 'https://picsum.photos/300/300?random=105' },
+  { id: '101', name: '고강도 시스템 강관 A급', price: 12000, img: 'https://picsum.photos/300/300?random=101' },
+  { id: '102', name: '안전 발판 400*1829', price: 8500, img: 'https://picsum.photos/300/300?random=102' },
+  { id: '103', name: '연결핀 (50개입)', price: 45000, img: 'https://picsum.photos/300/300?random=103' },
+  { id: '104', name: '클램프 자동/구리스', price: 3200, img: 'https://picsum.photos/300/300?random=104' },
+  { id: '105', name: '파이프 행거 (대)', price: 7000, img: 'https://picsum.photos/300/300?random=105' },
 ])
 
 const mockSellers = ['건설자재총판', '대한철강', '안전제일자재', '현대건설자재', 'K-스틸']
-
 const getSellerForProduct = (productId: string) => {
-    const numericId = parseInt(productId.replace(/\D/g, '')) || 0
-    return mockSellers[numericId % mockSellers.length]
+  const numericId = parseInt(productId.replace(/\D/g, '')) || 0
+  return mockSellers[numericId % mockSellers.length]
 }
 
 onMounted(async () => {
-    // Scroll to top when entering product detail page
-    window.scrollTo(0, 0)
-    
-    const slug = route.params.slug
-    try {
-        const res = await fetch(`/api/products/${slug}`)
-        if (res.ok) {
-            const data = await res.json()
-            product.value = {
-                id: data.id,
-                slug: data.id,
-                itemName: data.itemName || '상품명 없음',
-                unitPrice: data.unitPrice || 0,
-                categoryName: data.categoryName,
-                imageUrls: data.imageUrls || [],
-                description: data.description || "본 상품은 건설 현장에서 검증된 최고급 자재입니다. 내구성이 뛰어나며 안전 인증을 통과하였습니다. 대량 구매 시 추가 할인이 가능하오니 판매자에게 문의 바랍니다. \n\n[상품 상세 특징]\n- KC 인증 완료\n- 고강도 강철 사용\n- 부식 방지 코팅 처리",
-                sellerName: data.sellerName || getSellerForProduct(data.id),
-            }
-        } else {
-            throw new Error('Product not found')
-        }
-    } catch (e) {
-        console.warn('Backend fetch failed, using mock data for layout demo', e)
-        // Fallback for layout demonstration
-        const mockId = 'mock-1'
-        product.value = {
-            id: mockId,
-            slug: slug as string,
-            itemName: '프리미엄 시스템 비계 (예시 상품)',
-            unitPrice: 15000,
-            categoryName: '시스템비계 · 동바리',
-            imageUrls: [],
-            description: "이 화면은 백엔드 데이터 연동 실패 시 보여지는 예시 데이터입니다.\n\n강력한 내구성과 안전성을 자랑하는 프리미엄 시스템 비계입니다. 현장에서 가장 많이 사용하는 규격으로, 호환성이 뛰어납니다.",
-            sellerName: getSellerForProduct(mockId),
-        }
+  window.scrollTo(0, 0)
+  const slug = route.params.slug
+  try {
+    const res = await fetch(`/api/products/${slug}`)
+    if (res.ok) {
+      const data = await res.json()
+      product.value = {
+        id: data.id,
+        slug: data.id,
+        itemName: data.itemName || '상품명 없음',
+        unitPrice: data.unitPrice || 0,
+        categoryName: data.categoryName,
+        imageUrls: data.imageUrls || [],
+        description: data.description || "본 상품은 건설 현장에서 검증된 최고급 자재입니다. 내구성이 뛰어나며 안전 인증을 통과하였습니다.\n\n[상품 상세 특징]\n- KC 인증 완료\n- 고강도 강철 사용\n- 부식 방지 코팅 처리",
+        sellerName: data.sellerName || getSellerForProduct(data.id),
+      }
+    } else {
+      throw new Error('Product not found')
     }
-    // Wait for cart fetch if not initialized
-    if (!cartStore.initialized) {
-        await cartStore.fetchCart()
+  } catch (e) {
+    const mockId = 'mock-1'
+    product.value = {
+      id: mockId,
+      slug: slug as string,
+      itemName: '프리미엄 시스템 비계 (예시 상품)',
+      unitPrice: 15000,
+      categoryName: '시스템비계 · 동바리',
+      imageUrls: [],
+      description: "이 화면은 백엔드 데이터 연동 실패 시 보여지는 예시 데이터입니다.\n\n강력한 내구성과 안전성을 자랑하는 프리미엄 시스템 비계입니다.",
+      sellerName: getSellerForProduct(mockId),
     }
-    
-    // Save to recently viewed
-    if (product.value) {
-        const recentStore = useRecentStore()
-        const imgParams = product.value.imageUrls && product.value.imageUrls.length > 0
-            ? product.value.imageUrls[0]
-            : `https://picsum.photos/600/600?random=${product.value.id.charCodeAt(product.value.id.length - 1)}`
-        recentStore.addRecent(product.value, imgParams)
-    }
+  }
+
+  if (!cartStore.initialized) {
+    await cartStore.fetchCart()
+  }
+
+  if (product.value) {
+    const recentStore = useRecentStore()
+    const imgParams = product.value.imageUrls && product.value.imageUrls.length > 0
+      ? product.value.imageUrls[0]
+      : `https://picsum.photos/600/600?random=${product.value.id.charCodeAt(product.value.id.length - 1)}`
+    recentStore.addRecent(product.value, imgParams)
+  }
 })
 
 const decreaseQty = () => { if (quantity.value > 1) quantity.value-- }
 const increaseQty = () => { quantity.value++ }
 
-const totalPrice = computed(() => {
-    return (product.value?.unitPrice || 0) * quantity.value
-})
+const totalPrice = computed(() => (product.value?.unitPrice || 0) * quantity.value)
 
-// Cart Actions
 const addToCart = async () => {
-    if (!product.value) return
-    const success = await cartStore.addToCart(product.value.id, quantity.value)
-    if (success) {
-        alert(`${product.value.itemName} ${quantity.value}개를 장바구니에 담았습니다.`)
-    }
+  if (!product.value) return
+  const success = await cartStore.addToCart(product.value.id, quantity.value)
+  if (success) {
+    alert(`${product.value.itemName} ${quantity.value}개를 장바구니에 담았습니다.`)
+  }
 }
-
 const clearAndAddToCart = async () => {
-    if (!product.value) return
-    
-    await cartStore.clearCart()
-    await addToCart()
+  if (!product.value) return
+  await cartStore.clearCart()
+  await addToCart()
 }
+const goToCart = () => { router.push('/cart') }
+const buyNow = () => { alert('주문 작성을 시작합니다.') }
 
-const goToCart = () => {
-    router.push('/cart')
-}
-
-const buyNow = () => {
-    alert(`주문 작성을 시작합니다.`)
-}
-
-// Wishlist Logic
-const isWishlisted = computed(() => {
-    return product.value ? wishlistStore.isWishlisted(product.value.id) : false
-})
-
+const isWishlisted = computed(() => product.value ? wishlistStore.isWishlisted(product.value.id) : false)
 const toggleWishlist = async () => {
-    if (product.value) {
-        await wishlistStore.toggleWishlist(product.value.id)
-    }
+  if (product.value) await wishlistStore.toggleWishlist(product.value.id)
 }
 </script>
 
 <template>
-  <div class="bg-gray-50 min-h-screen pb-20">
-      <!-- Loading State -->
-      <div v-if="!product" class="flex justify-center items-center h-screen">
-          <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
-      </div>
+  <div class="pd-wrap">
+    <!-- Loading -->
+    <div v-if="!product" class="pd-loading">
+      <div class="pd-spinner" />
+    </div>
 
-      <div v-else class="container mx-auto px-4 py-8 max-w-6xl">
-        <!-- Breadcrumb -->
-        <nav class="text-sm text-gray-500 mb-6 flex items-center gap-2">
-            <router-link to="/" class="hover:text-indigo-600">홈</router-link>
-            <span>&gt;</span>
-            <span class="hover:text-indigo-600 cursor-pointer">{{ product.categoryName }}</span>
-            <span>&gt;</span>
-            <span class="text-gray-900 font-medium">{{ product.itemName }}</span>
-        </nav>
+    <div v-else class="pd-inner">
+      <!-- Breadcrumb -->
+      <nav class="pd-breadcrumb">
+        <router-link to="/" class="pd-breadcrumb__link">홈</router-link>
+        <span class="pd-breadcrumb__sep">›</span>
+        <span class="pd-breadcrumb__link">{{ product.categoryName }}</span>
+        <span class="pd-breadcrumb__sep">›</span>
+        <span class="pd-breadcrumb__current">{{ product.itemName }}</span>
+      </nav>
 
-        <!-- Top Section: Image & Info -->
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-16 items-start">
-            
-            <!-- Left: Images (Span 3) -->
-            <div class="lg:col-span-3 flex flex-col h-full">
-                <!-- Main Image -->
-                <div class="flex-1 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 relative group select-none min-h-[400px]">
-                    <img :key="selectedImageIndex" :src="selectedImage" class="absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-300" alt="Product Detail">
-                    <div class="absolute top-4 left-4 bg-indigo-600 text-white text-xs px-2 py-1 rounded font-bold z-10">BEST</div>
-                    
-                    <!-- Slider Arrows -->
-                    <button 
-                        @click.stop="prevImage" 
-                        class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 focus:outline-none z-10"
-                        title="이전 이미지"
-                    >
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                    </button>
-                    <button 
-                        @click.stop="nextImage" 
-                        class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 focus:outline-none z-10"
-                        title="다음 이미지"
-                    >
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </button>
+      <!-- Top: Image + Info -->
+      <div class="pd-top">
+        <!-- Images -->
+        <div class="pd-images">
+          <!-- Main image -->
+          <div class="pd-main-img-wrap group">
+            <img :key="selectedImageIndex" :src="selectedImage" class="pd-main-img" alt="상품 이미지">
 
-                    <!-- Page Indicator -->
-                    <div class="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full z-10">
-                        {{ selectedImageIndex + 1 }} / {{ mockImages.length }}
-                    </div>
-                </div>
+            <AppBadge variant="primary" class="pd-img-badge">BEST</AppBadge>
 
-                <!-- Thumbnails -->
-                <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide mt-4 h-20 flex-shrink-0">
-                    <button 
-                        v-for="(img, idx) in mockImages" 
-                        :key="idx" 
-                        @click="selectedImageIndex = idx"
-                        :class="['flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all relative', selectedImageIndex === idx ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-transparent hover:border-gray-300 opacity-70 hover:opacity-100']"
-                    >
-                         <img :src="img" class="w-full h-full object-cover">
-                         <div v-if="selectedImageIndex === idx" class="absolute inset-0 bg-indigo-600/10"></div>
-                    </button>
-                </div>
-            </div>
+            <button @click.stop="prevImage" class="pd-img-arrow pd-img-arrow--left" title="이전">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button @click.stop="nextImage" class="pd-img-arrow pd-img-arrow--right" title="다음">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
 
-            <!-- Right: Product Info & Actions (Span 2) -->
-            <div class="lg:col-span-2 w-full flex flex-col h-full">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col relative">
-                    <div class="flex justify-between items-start mb-2 pr-10">
-                        <span class="text-indigo-600 font-bold text-sm tracking-wide">{{ product.sellerName }}</span>
-                    </div>
-                    
-                    <!-- Wishlist Toggle Button -->
-                    <button 
-                      @click="toggleWishlist" 
-                      class="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                      :class="isWishlisted ? 'text-red-500' : 'text-gray-300 hover:text-red-400'"
-                    >
-                      <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    </button>
-                    
-                    <h1 class="text-2xl font-bold text-gray-900 mb-4 leading-tight pr-10">{{ product.itemName }}</h1>
-                    
-                    <div class="flex items-end gap-2 mb-6 border-b border-gray-100 pb-6">
-                        <span class="text-3xl font-bold text-gray-900">{{ product.unitPrice.toLocaleString() }}</span>
-                        <span class="text-lg text-gray-400 mb-1">원</span>
-                    </div>
+            <div class="pd-img-counter">{{ selectedImageIndex + 1 }} / {{ mockImages.length }}</div>
+          </div>
 
-                    <div class="space-y-4 mb-8">
-                        <div class="flex justify-between items-center text-sm text-gray-600">
-                            <span>배송비</span>
-                            <span class="font-medium text-gray-900">3,000원 (50,000원 이상 무료)</span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm text-gray-600">
-                            <span>배송예정</span>
-                            <span class="font-medium text-gray-900">모레 도착 예정</span>
-                        </div>
-                    </div>
-
-                    <!-- Quantity -->
-                    <div class="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center">
-                        <span class="font-medium text-gray-700">수량</span>
-                        <div class="flex items-center bg-white border border-gray-300 rounded">
-                            <button @click="decreaseQty" class="px-3 py-1 hover:bg-gray-100 text-gray-600">-</button>
-                            <input type="text" :value="quantity" readonly class="w-12 text-center text-gray-900 font-bold focus:outline-none">
-                            <button @click="increaseQty" class="px-3 py-1 hover:bg-gray-100 text-gray-600">+</button>
-                        </div>
-                    </div>
-
-                    <!-- Total -->
-                    <div class="flex justify-between items-end mb-6">
-                        <span class="text-gray-600 font-medium">총 상품 금액</span>
-                        <div class="text-right">
-                             <span class="text-2xl font-black text-indigo-600">{{ totalPrice.toLocaleString() }}</span>
-                             <span class="text-sm text-gray-500">원</span>
-                        </div>
-                    </div>
-
-                    <!-- Spacer to push buttons to bottom -->
-                    <div class="mt-auto"></div>
-
-                    <!-- Cart Conflict Warning -->
-                    <div v-if="hasCartConflict" class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-5">
-                        <div class="flex items-center gap-3 mb-4">
-                            <svg class="w-7 h-7 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-base font-bold text-yellow-900 mb-1">다른 판매자 상품이 장바구니에 있습니다</h3>
-                                <p class="text-sm text-yellow-800">
-                                    현재 <strong>'{{ currentCartSeller }}'</strong> 상품 {{ currentCartItemCount }}개가 담겨있습니다. 한 주문에는 같은 판매자 상품만 담을 수 있습니다.
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex flex-col gap-2">
-                            <button 
-                                @click="goToCart"
-                                class="w-full bg-white border-2 border-yellow-600 text-yellow-900 py-3 px-4 rounded-lg font-bold hover:bg-yellow-50 transition flex items-center justify-center gap-2"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                장바구니 확인하기
-                            </button>
-                            <button 
-                                @click="clearAndAddToCart"
-                                class="w-full bg-red-500 text-white py-3 px-4 rounded-lg font-bold hover:bg-red-600 transition flex items-center justify-center gap-2"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                기존 상품 삭제하고 담기
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Normal Buttons -->
-                    <div v-else class="flex gap-3">
-                        <button @click="addToCart" class="flex-1 border border-indigo-600 text-indigo-600 py-3.5 rounded-xl font-bold hover:bg-indigo-50 transition transform active:scale-95">
-                            장바구니
-                        </button>
-                        <button @click="buyNow" class="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 shadow-md hover:shadow-lg transition transform active:scale-95">
-                            구매하기
-                        </button>
-                    </div>
-                </div>
-            </div>
+          <!-- Thumbnails -->
+          <div class="pd-thumbs">
+            <button
+              v-for="(img, idx) in mockImages"
+              :key="idx"
+              @click="selectedImageIndex = idx"
+              :class="['pd-thumb', selectedImageIndex === idx ? 'pd-thumb--active' : '']"
+            >
+              <img :src="img" class="pd-thumb__img">
+            </button>
+          </div>
         </div>
 
-        <!-- NEW MIDDLE SECTION: Seller's Other Products -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-16">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
-                <h3 class="text-xl font-bold text-gray-900">이 판매자의 다른 상품</h3>
-                 <button @click="$router.push({ path: '/', query: { seller: product?.sellerName } })" class="text-sm text-indigo-600 font-bold hover:bg-indigo-50 px-3 py-1.5 rounded transition">
-                     이 판매자의 상품 모아보기 &rarr;
-                 </button>
-            </div>
-            
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                <div v-for="item in sellerProducts" :key="item.id" class="group cursor-pointer">
-                    <div class="overflow-hidden rounded-lg bg-gray-100 mb-2 border border-gray-100">
-                        <img :src="item.img" class="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105">
-                    </div>
-                    <h4 class="text-sm text-gray-800 line-clamp-2 group-hover:text-indigo-600 transition h-10">{{ item.name }}</h4>
-                    <p class="text-sm font-bold text-gray-900 mt-1">{{ item.price.toLocaleString() }}원</p>
-                </div>
-            </div>
-        </div>
+        <!-- Product Info -->
+        <div class="pd-info">
+          <!-- Seller + Wishlist -->
+          <div class="pd-info__seller-row">
+            <span class="pd-info__seller">{{ product.sellerName }}</span>
+            <button
+              @click="toggleWishlist"
+              class="pd-wishlist-btn"
+              :class="isWishlisted ? 'pd-wishlist-btn--active' : ''"
+              title="찜하기"
+            >
+              <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </button>
+          </div>
 
-        <!-- Middle Section: Content -->
-        <div class="w-full">
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[500px]">
-                <h3 class="text-xl font-bold text-gray-900 mb-6 pb-4 border-b">상품 상세 정보</h3>
-                <div class="prose max-w-none text-gray-800 leading-relaxed whitespace-pre-line">
-                    {{ product.description }}
-                </div>
-                <div class="mt-8 space-y-4">
-                    <img :src="`https://picsum.photos/800/600?random=${product.id}99`" class="w-full rounded-lg shadow-sm">
-                    <p class="text-center text-gray-500 py-4">
-                        상세한 제품 스펙과 시공 방법은 위 이미지를 참고해주세요.
-                    </p>
-                </div>
+          <h1 class="pd-info__name">{{ product.itemName }}</h1>
+
+          <div class="pd-info__price-row">
+            <span class="gl-price-lg">{{ product.unitPrice.toLocaleString() }}</span>
+            <span class="pd-info__price-unit">원</span>
+          </div>
+
+          <!-- Meta -->
+          <div class="pd-info__meta">
+            <div class="pd-info__meta-row">
+              <span class="pd-info__meta-label">배송비</span>
+              <span class="pd-info__meta-val">3,000원 (50,000원 이상 무료)</span>
             </div>
+            <div class="pd-info__meta-row">
+              <span class="pd-info__meta-label">배송예정</span>
+              <span class="pd-info__meta-val">모레 도착 예정</span>
+            </div>
+          </div>
+
+          <!-- Qty -->
+          <div class="pd-qty-wrap">
+            <span class="pd-qty-label">수량</span>
+            <div class="pd-qty-ctrl">
+              <button @click="decreaseQty" class="pd-qty-btn">−</button>
+              <input type="text" :value="quantity" readonly class="pd-qty-input">
+              <button @click="increaseQty" class="pd-qty-btn">+</button>
+            </div>
+          </div>
+
+          <!-- Total -->
+          <div class="pd-total">
+            <span class="pd-total__label">총 상품 금액</span>
+            <div class="pd-total__amount">
+              <span class="gl-price-lg">{{ totalPrice.toLocaleString() }}</span>
+              <span class="pd-total__unit">원</span>
+            </div>
+          </div>
+
+          <!-- Cart Conflict Warning -->
+          <div v-if="hasCartConflict" class="pd-conflict">
+            <div class="pd-conflict__header">
+              <svg class="w-6 h-6 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <h3 class="pd-conflict__title">다른 판매자 상품이 장바구니에 있습니다</h3>
+                <p class="pd-conflict__desc">
+                  현재 <strong>'{{ currentCartSeller }}'</strong> 상품 {{ currentCartItemCount }}개가 담겨있습니다.
+                  한 주문에는 같은 판매자 상품만 담을 수 있습니다.
+                </p>
+              </div>
+            </div>
+            <div class="pd-conflict__actions">
+              <AppButton variant="outline" block @click="goToCart">
+                장바구니 확인하기
+              </AppButton>
+              <AppButton variant="danger" block @click="clearAndAddToCart">
+                기존 상품 삭제하고 담기
+              </AppButton>
+            </div>
+          </div>
+
+          <!-- Normal Buttons -->
+          <div v-else class="pd-actions">
+            <AppButton variant="outline" size="lg" @click="addToCart" style="flex:1;">
+              장바구니
+            </AppButton>
+            <AppButton variant="primary" size="lg" @click="buyNow" style="flex:1;">
+              구매하기
+            </AppButton>
+          </div>
         </div>
       </div>
+
+      <!-- Seller's Other Products -->
+      <div class="pd-section">
+        <div class="pd-section__header">
+          <h3 class="pd-section__title">이 판매자의 다른 상품</h3>
+          <button
+            @click="$router.push({ path: '/', query: { seller: product?.sellerName } })"
+            class="pd-section__more-btn"
+          >
+            이 판매자 상품 모아보기 →
+          </button>
+        </div>
+
+        <div class="pd-seller-products">
+          <div v-for="item in sellerProducts" :key="item.id" class="pd-sp-card">
+            <div class="pd-sp-card__thumb">
+              <img :src="item.img" class="pd-sp-card__img">
+            </div>
+            <h4 class="pd-sp-card__name">{{ item.name }}</h4>
+            <p class="pd-sp-card__price">{{ item.price.toLocaleString() }}원</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="pd-section">
+        <h3 class="pd-section__title" style="margin-bottom:1.5rem;">상품 상세 정보</h3>
+        <div class="pd-desc">
+          {{ product.description }}
+        </div>
+        <div class="pd-desc-img-wrap">
+          <img
+            :src="`https://picsum.photos/800/600?random=${product.id}99`"
+            class="pd-desc-img"
+          >
+          <p class="pd-desc-img-cap">상세한 제품 스펙과 시공 방법은 위 이미지를 참고해주세요.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
+/* ── Wrapper ── */
+.pd-wrap {
+  background: var(--color-bg);
+  min-height: calc(100vh - 64px);
+  padding-bottom: 5rem;
 }
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+.pd-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 64px);
 }
+.pd-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.pd-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* Breadcrumb */
+.pd-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+.pd-breadcrumb__link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.12s;
+  cursor: pointer;
+}
+.pd-breadcrumb__link:hover { color: var(--color-primary); }
+.pd-breadcrumb__sep { color: var(--color-text-muted); }
+.pd-breadcrumb__current { color: var(--color-navy); font-weight: 600; }
+
+/* ── Top Section ── */
+.pd-top {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+@media (min-width: 1024px) { .pd-top { grid-template-columns: 3fr 2fr; gap: 3rem; } }
+
+/* Images */
+.pd-images { display: flex; flex-direction: column; gap: 1rem; }
+.pd-main-img-wrap {
+  position: relative;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  min-height: 400px;
+  box-shadow: var(--shadow-card);
+}
+.pd-main-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 0.25s ease;
+}
+.pd-img-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+}
+.pd-img-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.9);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  color: var(--color-navy);
+}
+.pd-main-img-wrap:hover .pd-img-arrow { opacity: 1; }
+.pd-img-arrow--left { left: 1rem; }
+.pd-img-arrow--right { right: 1rem; }
+.pd-img-arrow:hover { background: white; transform: translateY(-50%) scale(1.1); }
+.pd-img-counter {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  background: rgba(26,26,26,0.65);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 99px;
+  z-index: 10;
+}
+
+.pd-thumbs {
+  display: flex;
+  gap: 0.625rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.pd-thumb {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, opacity 0.15s;
+  opacity: 0.65;
+  padding: 0;
+  background: none;
+}
+.pd-thumb:hover { opacity: 0.85; }
+.pd-thumb--active { border-color: var(--color-primary); opacity: 1; }
+.pd-thumb__img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Info */
+.pd-info {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+  padding: 1.75rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pd-info__seller-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pd-info__seller {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.pd-wishlist-btn {
+  padding: 0.5rem;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #CBD5E1;
+  transition: color 0.15s, background-color 0.15s, transform 0.15s;
+}
+.pd-wishlist-btn:hover { background: #FFF0F0; color: var(--color-danger); transform: scale(1.1); }
+.pd-wishlist-btn--active { color: var(--color-danger); }
+
+.pd-info__name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-navy);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.pd-info__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.pd-info__price-unit { font-size: 1rem; color: var(--color-text-secondary); margin-left: 2px; }
+
+.pd-info__meta { display: flex; flex-direction: column; gap: 0.5rem; }
+.pd-info__meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+.pd-info__meta-label { color: var(--color-text-secondary); }
+.pd-info__meta-val { font-weight: 600; color: var(--color-navy); }
+
+.pd-qty-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #F8FAFC;
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1rem;
+}
+.pd-qty-label { font-weight: 600; color: var(--color-navy); }
+.pd-qty-ctrl {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: white;
+  overflow: hidden;
+}
+.pd-qty-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  transition: background-color 0.12s;
+}
+.pd-qty-btn:hover { background: #F1F5F9; color: var(--color-navy); }
+.pd-qty-input {
+  width: 52px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-navy);
+  border: none;
+  border-left: 1.5px solid var(--color-border);
+  border-right: 1.5px solid var(--color-border);
+  outline: none;
+  font-family: inherit;
+  background: white;
+  padding: 0;
+}
+
+.pd-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.pd-total__label { font-weight: 600; color: var(--color-text-secondary); }
+.pd-total__amount { display: flex; align-items: baseline; gap: 2px; }
+.pd-total__unit { font-size: 0.875rem; color: var(--color-text-secondary); }
+
+/* Cart Conflict */
+.pd-conflict {
+  background: #FFFBEA;
+  border: 2px solid #F6D347;
+  border-radius: var(--radius-lg);
+  padding: 1.125rem;
+}
+.pd-conflict__header { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
+.pd-conflict__title { font-size: 0.9375rem; font-weight: 700; color: #78350F; margin-bottom: 0.25rem; }
+.pd-conflict__desc { font-size: 0.8375rem; color: #92400E; line-height: 1.5; }
+.pd-conflict__actions { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.pd-actions { display: flex; gap: 0.75rem; }
+
+/* Section */
+.pd-section {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+.pd-section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.pd-section__title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--color-navy);
+}
+.pd-section__more-btn {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.12s;
+  font-family: inherit;
+}
+.pd-section__more-btn:hover { background: var(--color-primary-light); }
+
+.pd-seller-products {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+@media (min-width: 640px)  { .pd-seller-products { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1024px) { .pd-seller-products { grid-template-columns: repeat(5, 1fr); } }
+
+.pd-sp-card { cursor: pointer; }
+.pd-sp-card:hover .pd-sp-card__img { transform: scale(1.05); }
+.pd-sp-card__thumb {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #F1F5F9;
+  margin-bottom: 0.625rem;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-border);
+}
+.pd-sp-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+.pd-sp-card__name {
+  font-size: 0.8125rem;
+  color: var(--color-navy);
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 2.4rem;
+  margin-bottom: 0.25rem;
+}
+.pd-sp-card:hover .pd-sp-card__name { color: var(--color-primary); }
+.pd-sp-card__price { font-size: 0.875rem; font-weight: 800; color: var(--color-navy); }
+
+/* Description */
+.pd-desc {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  white-space: pre-line;
+  margin-bottom: 2rem;
+}
+.pd-desc-img-wrap { text-align: center; }
+.pd-desc-img { width: 100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.pd-desc-img-cap { font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.75rem; }
 </style>

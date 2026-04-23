@@ -1,71 +1,66 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '../utils/api'
+import AppButton from '../components/ui/AppButton.vue'
+import AppInput from '../components/ui/AppInput.vue'
+import AppPageHeader from '../components/ui/AppPageHeader.vue'
 
-// 상태 관리
+declare const daum: any
+
+const router = useRouter()
+
 const form = ref({
-  id: '', // username (read-only)
-  password: '', // new password
+  id: '',
+  password: '',
   passwordConfirm: '',
   email: '',
   businessNumber: '',
   phoneNumber: '',
   verificationCode: '',
   businessAddress: '',
+  businessDetailAddress: '',   // ← NEW
   yardAddress: '',
+  yardDetailAddress: '',       // ← NEW
   companyName: ''
 })
 
-const isPhoneVerified = ref(true) // 기존 회원은 이미 인증되었다고 가정 (번호 변경 시 false로 전환 로직 필요)
+const isPhoneVerified = ref(true)
 const isSameAddress = ref(false)
 const isChangingPassword = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
 const successMsg = ref('')
 
-// 초기 데이터 로딩 (가정)
-// 초기 데이터 로딩
 onMounted(async () => {
-    try {
-        // interceptor will redirect if unauthenticated
-        const res = await api.get(`/api/users/me`)
-        const data = res.data
-        
-        form.value.id = data.username
-        form.value.email = data.email || ''
-        form.value.phoneNumber = data.phone || ''
-        form.value.companyName = data.companyName || ''
-        form.value.businessNumber = data.businessNumber || ''
-        form.value.businessAddress = data.businessAddress || ''
-        form.value.yardAddress = data.yardAddress || ''
-        
-        if (data.businessAddress && data.businessAddress === data.yardAddress) {
-            isSameAddress.value = true
-        }
-
-    } catch (e) {
-        console.error(e)
-        // 토큰이 만료되었거나 오류 발생 시 (interceptor가 로그인 화면으로 보냄)
-        console.warn('Failed to fetch user data', e)
+  try {
+    const res = await api.get(`/api/users/me`)
+    const data = res.data
+    form.value.id = data.username
+    form.value.email = data.email || ''
+    form.value.phoneNumber = data.phone || ''
+    form.value.companyName = data.companyName || ''
+    form.value.businessNumber = data.businessNumber || ''
+    // 기존 businessAddress에 상세주소가 포함된 경우 그대로 표시
+    form.value.businessAddress = data.businessAddress || ''
+    form.value.businessDetailAddress = ''
+    form.value.yardAddress = data.yardAddress || ''
+    form.value.yardDetailAddress = ''
+    if (data.businessAddress && data.businessAddress === data.yardAddress) {
+      isSameAddress.value = true
     }
-})
-
-// 유효성 검사 규칙
-const validation = ref({
-  password: {
-    valid: true,
-    msg: ''
+  } catch (e) {
+    console.warn('Failed to fetch user data', e)
   }
 })
 
-// 비밀번호 유효성 검사 (입력시에만 검사)
+const validation = ref({ password: { valid: true, msg: '' } })
+
 const validatePassword = () => {
   if (!form.value.password) {
-      // 비밀번호 변경을 원하지 않는 경우
-      validation.value.password = { valid: true, msg: '' }
-      return
+    validation.value.password = { valid: true, msg: '' }
+    return
   }
-
   const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,20}$/
   if (!pwdRegex.test(form.value.password)) {
     validation.value.password = { valid: false, msg: '영문과 숫자를 포함한 8~20자를 입력해주세요.' }
@@ -74,59 +69,28 @@ const validatePassword = () => {
   }
 }
 
-// 비밀번호 일치 확인
 const isPasswordMismatch = ref(false)
 watch(() => [form.value.password, form.value.passwordConfirm], ([pwd, confirm]) => {
-    if (!pwd || !confirm) {
-        isPasswordMismatch.value = false
-        return
-    }
-    isPasswordMismatch.value = pwd !== confirm
+  if (!pwd || !confirm) { isPasswordMismatch.value = false; return }
+  isPasswordMismatch.value = pwd !== confirm
 })
-
 watch(() => form.value.password, validatePassword)
-
-// 주소 동기화
-watch(isSameAddress, (newVal) => {
-  if (newVal) {
-    form.value.yardAddress = form.value.businessAddress
-  }
-})
-
-watch(() => form.value.businessAddress, (newVal) => {
-  if (isSameAddress.value) {
-    form.value.yardAddress = newVal
-  }
-})
-
-// 전화번호 변경 감지
-watch(() => form.value.phoneNumber, () => {
-    // 초기 로딩 시점에는 무시하거나, 실제 변경 시 인증 상태 초기화 로직
-    // 여기서는 간단히 처리
-})
+watch(isSameAddress, (v) => { if (v) form.value.yardAddress = form.value.businessAddress })
+watch(() => form.value.businessAddress, (v) => { if (isSameAddress.value) form.value.yardAddress = v })
 
 const requestVerification = () => {
-  if (!form.value.phoneNumber) {
-    alert('휴대폰 번호를 입력해주세요.')
-    return
-  }
+  if (!form.value.phoneNumber) { alert('휴대폰 번호를 입력해주세요.'); return }
   isPhoneVerified.value = false
   alert(`인증번호가 발송되었습니다. (테스트용: 아무 번호나 입력)`)
 }
-
 const verifyCode = () => {
-  if (!form.value.verificationCode) {
-    alert('인증번호를 입력해주세요.')
-    return
-  }
+  if (!form.value.verificationCode) { alert('인증번호를 입력해주세요.'); return }
   isPhoneVerified.value = true
   alert('인증되었습니다.')
 }
-
 const togglePasswordChange = (show: boolean) => {
   isChangingPassword.value = show
   if (!show) {
-    // 취소 시 초기화
     form.value.password = ''
     form.value.passwordConfirm = ''
     validation.value.password = { valid: true, msg: '' }
@@ -136,233 +100,381 @@ const togglePasswordChange = (show: boolean) => {
 
 const handleUpdate = async () => {
   validatePassword()
+  if (!validation.value.password.valid) { errorMsg.value = '비밀번호 형식을 확인해주세요.'; return }
+  if (isPasswordMismatch.value) { errorMsg.value = '비밀번호가 일치하지 않습니다.'; return }
 
-  if (!validation.value.password.valid) {
-    errorMsg.value = '비밀번호 형식을 확인해주세요.'
-    return
-  }
-  if (isPasswordMismatch.value) {
-    errorMsg.value = '비밀번호가 일치하지 않습니다.'
-    return
-  }
-  
   loading.value = true
   errorMsg.value = ''
   successMsg.value = ''
-
   try {
-      // API 호출 (Spring Boot) - PUT
-      await api.put(`/api/users/me`, {
-        password: form.value.password || undefined, // 변경 시에만 전송
-        phone: form.value.phoneNumber,
-        companyName: form.value.companyName,
-        email: form.value.email,
-        businessNumber: form.value.businessNumber,
-        businessAddress: form.value.businessAddress,
-        yardAddress: form.value.yardAddress
-      })
-
-      successMsg.value = '정보가 성공적으로 수정되었습니다.'
-      
-      // 스크롤 최상단으로 이동
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      
-      // 비밀번호가 변경되었어도 로그아웃 하지 않음
-      if (isChangingPassword.value && form.value.password) {
-         // alert('비밀번호가 변경되었습니다.') // 선택적: 명시적 알림이 필요하면 추가
-      }
-      
-      togglePasswordChange(false)
-      
-      // 에러 메시지 초기화
-      errorMsg.value = ''
-
+    await api.put(`/api/users/me`, {
+      password: form.value.password || undefined,
+      phone: form.value.phoneNumber,
+      companyName: form.value.companyName,
+      email: form.value.email,
+      businessNumber: form.value.businessNumber,
+      businessAddress: form.value.businessAddress
+        ? `${form.value.businessAddress} ${form.value.businessDetailAddress}`.trim()
+        : undefined,
+      yardAddress: form.value.yardAddress
+        ? `${form.value.yardAddress} ${form.value.yardDetailAddress}`.trim()
+        : undefined
+    })
+    successMsg.value = '정보가 성공적으로 수정되었습니다.'
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    togglePasswordChange(false)
+    errorMsg.value = ''
   } catch (e: any) {
     console.error(e)
-    if (e.response && e.response.data && e.response.data.message) {
-        errorMsg.value = e.response.data.message
-    } else {
-        errorMsg.value = '정보 수정 중 오류가 발생했습니다.'
-    }
+    errorMsg.value = e.response?.data?.message || '정보 수정 중 오류가 발생했습니다.'
   } finally {
     loading.value = false
   }
 }
+
+// Daum 우편번호 팝업
+const execDaumPostcode = (type: 'business' | 'yard') => {
+  new daum.Postcode({
+    oncomplete: (data: any) => {
+      let addr = data.userSelectedType === 'R' ? data.roadAddress : data.jibunAddress
+      let extra = ''
+      if (data.userSelectedType === 'R') {
+        if (data.bname && /[동|로|가]$/g.test(data.bname)) extra += data.bname
+        if (data.buildingName && data.apartment === 'Y') extra += (extra ? ', ' : '') + data.buildingName
+        if (extra) extra = ` (${extra})`
+      }
+      const full = `(${data.zonecode}) ${addr}${extra}`
+      if (type === 'business') {
+        form.value.businessAddress = full
+        form.value.businessDetailAddress = ''
+        const el = document.getElementById('mp-businessDetailAddress')
+        if (el) el.focus()
+      } else {
+        form.value.yardAddress = full
+        form.value.yardDetailAddress = ''
+        const el = document.getElementById('mp-yardDetailAddress')
+        if (el) el.focus()
+      }
+    }
+  }).open()
+}
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-xl w-full space-y-8 bg-white p-8 shadow rounded-lg">
-      <div>
-        <h2 class="text-center text-3xl font-extrabold text-gray-900">내 정보</h2>
+  <div class="mypage-wrap">
+    <div class="mypage-inner">
+      <AppPageHeader title="내 정보" subtitle="계정 정보와 사업자 정보를 관리합니다." />
+
+      <!-- Alert Messages -->
+      <div v-if="errorMsg" class="mypage-alert mypage-alert--error">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {{ errorMsg }}
+      </div>
+      <div v-if="successMsg" class="mypage-alert mypage-alert--success">
+        <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        {{ successMsg }}
       </div>
 
-      <form class="mt-8 space-y-6" @submit.prevent="handleUpdate">
-        
-        <!-- 메시지 표시 -->
-        <div v-if="errorMsg" class="rounded-md bg-red-50 p-4">
-          <div class="text-sm text-red-700">{{ errorMsg }}</div>
-        </div>
-        <div v-if="successMsg" class="rounded-md bg-green-50 p-4">
-          <div class="text-sm text-green-700">{{ successMsg }}</div>
-        </div>
-
-        <div class="space-y-4">
-          
-          <!-- 기본 정보 섹션 -->
-          <div class="bg-gray-50 p-4 rounded-md space-y-3">
-            <h3 class="text-lg font-medium text-gray-900">계정 정보</h3>
-            
-            <!-- 아이디 (수정 불가) -->
-            <div>
-              <label for="id" class="block text-sm font-medium text-gray-700">아이디</label>
-              <input 
-                id="id" 
-                v-model="form.id" 
-                type="text" 
-                readonly 
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-500 sm:text-sm cursor-not-allowed" 
-              >
-            </div>
-
-            <!-- 회사명 -->
-            <div>
-              <label for="companyName" class="block text-sm font-medium text-gray-700">회사명</label>
-              <input id="companyName" v-model="form.companyName" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="회사명 입력">
-            </div>
+      <form @submit.prevent="handleUpdate" class="mypage-form">
+        <!-- 계정 정보 -->
+        <div class="mypage-section">
+          <h2 class="mypage-section__title">계정 정보</h2>
+          <div class="mypage-section__body">
+            <AppInput v-model="form.id" label="아이디" disabled />
+            <AppInput v-model="form.companyName" label="회사명" placeholder="회사명 입력" />
           </div>
-        
-          <div class="bg-gray-50 p-4 rounded-md space-y-3">
-             <h3 class="text-lg font-medium text-gray-900">비밀번호 변경</h3>
-             
-             <div v-if="!isChangingPassword">
-               <button type="button" @click="togglePasswordChange(true)" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap">
-                 변경
-               </button>
-             </div>
+        </div>
 
-             <div v-else class="space-y-3">
-              <!-- 비밀번호 -->
-              <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">새 비밀번호</label>
-                <input 
-                  id="password" 
-                  v-model="form.password" 
-                  @blur="validatePassword"
-                  type="password" 
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                  :class="{'border-red-500': !validation.password.valid}"
-                  placeholder="영문+숫자 조합 8~20자"
-                >
-                <p v-if="!validation.password.valid" class="mt-1 text-sm text-red-600">{{ validation.password.msg }}</p>
-              </div>
-
-              <!-- 비밀번호 확인 -->
-              <div>
-                <label for="passwordConfirm" class="block text-sm font-medium text-gray-700">새 비밀번호 확인</label>
-                <input 
-                  id="passwordConfirm" 
-                  v-model="form.passwordConfirm" 
-                  type="password" 
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                  placeholder="비밀번호 재확인"
-                >
-                <p v-if="isPasswordMismatch" class="mt-1 text-sm text-red-600">비밀번호가 일치하지 않습니다.</p>
-              </div>
-
-              <div class="flex justify-end">
-                <button type="button" @click="togglePasswordChange(false)" class="text-xs text-gray-500 hover:text-gray-700 underline">
+        <!-- 비밀번호 변경 -->
+        <div class="mypage-section">
+          <h2 class="mypage-section__title">비밀번호 변경</h2>
+          <div class="mypage-section__body">
+            <div v-if="!isChangingPassword">
+              <AppButton type="button" variant="secondary" @click="togglePasswordChange(true)">
+                비밀번호 변경
+              </AppButton>
+            </div>
+            <div v-else class="mypage-password-fields">
+              <AppInput
+                v-model="form.password"
+                type="password"
+                label="새 비밀번호"
+                placeholder="영문+숫자 조합 8~20자"
+                :error="!validation.password.valid ? validation.password.msg : ''"
+                @blur="validatePassword"
+              />
+              <AppInput
+                v-model="form.passwordConfirm"
+                type="password"
+                label="새 비밀번호 확인"
+                placeholder="비밀번호 재확인"
+                :error="isPasswordMismatch ? '비밀번호가 일치하지 않습니다.' : ''"
+              />
+              <div style="text-align: right;">
+                <button type="button" @click="togglePasswordChange(false)" class="mypage-cancel-link">
                   비밀번호 변경 취소
                 </button>
               </div>
-             </div>
+            </div>
           </div>
+        </div>
 
-          <!-- 연락처 정보 섹션 -->
-          <div class="bg-gray-50 p-4 rounded-md space-y-3">
-            <h3 class="text-lg font-medium text-gray-900">연락처 정보</h3>
-            
-            <!-- 대표 번호 -->
+        <!-- 연락처 정보 -->
+        <div class="mypage-section">
+          <h2 class="mypage-section__title">연락처 정보</h2>
+          <div class="mypage-section__body">
             <div>
-              <label class="block text-sm font-medium text-gray-700">대표 번호</label>
-              <div class="flex mt-1 gap-2">
-                <input v-model="form.phoneNumber" type="tel" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="- 없이 숫자만 입력">
-                <button type="button" @click="requestVerification" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none whitespace-nowrap flex-shrink-0">
-                  재인증
-                </button>
+              <div class="mypage-input-row">
+                <AppInput v-model="form.phoneNumber" label="대표 번호" placeholder="- 없이 숫자만 입력" />
+                <AppButton type="button" @click="requestVerification" style="align-self: flex-end; white-space: nowrap;">재인증</AppButton>
+              </div>
+              <div v-if="!isPhoneVerified" class="mypage-input-row" style="margin-top: 0.75rem;">
+                <AppInput v-model="form.verificationCode" placeholder="인증번호 입력" />
+                <AppButton type="button" variant="outline" @click="verifyCode" style="align-self: flex-end; white-space: nowrap;">확인</AppButton>
               </div>
             </div>
-
-            <!-- 인증 번호 확인 -->
-             <div v-if="!isPhoneVerified">
-              <div class="flex mt-1 gap-2">
-                <input v-model="form.verificationCode" type="text" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="인증번호 입력">
-                <button type="button" @click="verifyCode" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none whitespace-nowrap flex-shrink-0">
-                  확인
-                </button>
-              </div>
-            </div>
-
-            <!-- 이메일 (선택) -->
-            <div>
-              <label for="email" class="block text-sm font-medium text-gray-700">이메일</label>
-              <input id="email" v-model="form.email" type="email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="example@domain.com">
-            </div>
+            <AppInput v-model="form.email" type="email" label="이메일" placeholder="example@domain.com" />
           </div>
+        </div>
 
-          <!-- 사업자 정보 섹션 -->
-          <div class="bg-gray-50 p-4 rounded-md space-y-3">
-            <h3 class="text-lg font-medium text-gray-900">사업자 정보</h3>
-            <!-- 사업자 번호 -->
-            <div>
-              <label for="businessNumber" class="block text-sm font-medium text-gray-700">사업자 등록 번호</label>
-              <input id="businessNumber" v-model="form.businessNumber" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="000-00-00000">
-            </div>
+        <!-- 사업자 정보 -->
+        <div class="mypage-section">
+          <h2 class="mypage-section__title">사업자 정보</h2>
+          <div class="mypage-section__body">
+            <AppInput v-model="form.businessNumber" label="사업자 등록 번호" placeholder="000-00-00000" />
           </div>
+        </div>
 
-          <!-- 주소 정보 섹션 -->
-          <div class="bg-gray-50 p-4 rounded-md space-y-3">
-            <h3 class="text-lg font-medium text-gray-900">주소지 정보</h3>
+        <!-- 주소지 정보 -->
+        <div class="mypage-section">
+          <h2 class="mypage-section__title">주소지 정보</h2>
+          <div class="mypage-section__body">
 
             <!-- 사업장 주소 -->
-            <div>
-              <label for="businessAddress" class="block text-sm font-medium text-gray-700">사업장 주소</label>
-              <input id="businessAddress" v-model="form.businessAddress" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="서울시 강남구...">
+            <div class="mypage-address-group">
+              <p class="mypage-label" style="margin-bottom: 0.375rem;">사업장 주소</p>
+              <div class="mypage-input-row">
+                <input
+                  v-model="form.businessAddress"
+                  type="text"
+                  readonly
+                  @click="execDaumPostcode('business')"
+                  class="mypage-addr-input"
+                  placeholder="주소 검색을 눌러주세요"
+                />
+                <AppButton type="button" variant="secondary" @click="execDaumPostcode('business')" style="white-space:nowrap; align-self:stretch;">
+                  주소 검색
+                </AppButton>
+              </div>
+              <input
+                id="mp-businessDetailAddress"
+                v-model="form.businessDetailAddress"
+                type="text"
+                class="mypage-detail-input"
+                style="margin-top: 0.5rem;"
+                placeholder="상세 주소 (건물명, 동/호수 등)"
+              />
             </div>
 
             <!-- 야적장 주소 -->
-            <div>
-              <div class="flex items-center justify-between">
-                <label for="yardAddress" class="block text-sm font-medium text-gray-700">야적장 주소</label>
-                <div class="flex items-center">
-                  <input id="sameAddress" type="checkbox" v-model="isSameAddress" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                  <label for="sameAddress" class="ml-2 block text-sm text-gray-900">사업장 주소와 동일</label>
-                </div>
+            <div class="mypage-address-group">
+              <div class="mypage-yard-header">
+                <p class="mypage-label">야적장 주소</p>
+                <label class="mypage-same-check">
+                  <input type="checkbox" v-model="isSameAddress" class="mypage-checkbox" />
+                  사업장 주소와 동일
+                </label>
               </div>
-              <input id="yardAddress" v-model="form.yardAddress" :disabled="isSameAddress" type="text" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-200" placeholder="물건을 상/하차할 주소">
+              <div class="mypage-input-row" style="margin-top: 0.375rem;">
+                <input
+                  v-model="form.yardAddress"
+                  type="text"
+                  readonly
+                  :disabled="isSameAddress"
+                  @click="!isSameAddress && execDaumPostcode('yard')"
+                  class="mypage-addr-input"
+                  :class="isSameAddress ? 'mypage-addr-input--disabled' : ''"
+                  placeholder="주소 검색을 눌러주세요"
+                />
+                <AppButton type="button" variant="secondary" @click="execDaumPostcode('yard')" :disabled="isSameAddress" style="white-space:nowrap; align-self:stretch;">
+                  주소 검색
+                </AppButton>
+              </div>
+              <input
+                id="mp-yardDetailAddress"
+                v-model="form.yardDetailAddress"
+                type="text"
+                :disabled="isSameAddress"
+                class="mypage-detail-input"
+                :class="isSameAddress ? 'mypage-detail-input--disabled' : ''"
+                style="margin-top: 0.5rem;"
+                placeholder="야적장 상세 주소 (물건 상/하차 지점)"
+              />
             </div>
           </div>
-
         </div>
 
-        <div class="flex gap-4">
-          <button 
-            type="button" 
-            @click="$router.push('/')"
-            class="w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+
+        <!-- Actions -->
+
+        <div class="mypage-actions">
+          <AppButton
+            type="button"
+            variant="secondary"
+            @click="router.push('/')"
           >
             취소
-          </button>
-          <button 
-            type="submit" 
+          </AppButton>
+          <AppButton
+            type="submit"
+            :loading="loading"
             :disabled="loading || (!!form.password && (!validation.password.valid || form.password !== form.passwordConfirm))"
-            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            style="flex: 1;"
           >
-            <span v-if="loading">저장 중...</span>
-            <span v-else>변경사항 저장</span>
-          </button>
+            변경사항 저장
+          </AppButton>
         </div>
       </form>
     </div>
   </div>
 </template>
+
+<style scoped>
+.mypage-wrap {
+  background: var(--color-bg);
+  min-height: calc(100vh - 64px);
+  padding: 2rem 1.5rem 5rem;
+}
+.mypage-inner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.mypage-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+.mypage-alert--error  { background: #FFF0F0; border: 1px solid #FECACA; color: var(--color-danger); }
+.mypage-alert--success { background: #E6FBF5; border: 1px solid #6EE7D3; color: var(--color-success); }
+
+.mypage-form { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.mypage-section {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.mypage-section__title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: #FAFBFD;
+}
+.mypage-section__body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mypage-password-fields { display: flex; flex-direction: column; gap: 1rem; }
+.mypage-cancel-link {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+  transition: color 0.12s;
+}
+.mypage-cancel-link:hover { color: var(--color-danger); }
+
+.mypage-input-row {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+}
+.mypage-input-row > *:first-child { flex: 1; }
+
+.mypage-yard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mypage-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.mypage-same-check {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.mypage-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.mypage-address-group { display: flex; flex-direction: column; }
+
+.mypage-addr-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  background: #F8FAFC;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.mypage-addr-input:hover:not(.mypage-addr-input--disabled) { border-color: var(--color-primary); }
+.mypage-addr-input--disabled { opacity: 0.55; cursor: not-allowed; background: #F1F5F9; }
+
+.mypage-detail-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #F8FAFC;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.mypage-detail-input::placeholder { color: var(--color-text-muted); }
+.mypage-detail-input:focus { border-color: var(--color-border-focus); box-shadow: 0 0 0 3px rgba(0,102,255,0.1); background: white; }
+.mypage-detail-input--disabled { opacity: 0.55; cursor: not-allowed; background: #F1F5F9; }
+
+.mypage-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+</style>

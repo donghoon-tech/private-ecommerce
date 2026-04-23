@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaseol Link Style Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #fcfcfc; }
+        .sidebar-item.active { background-color: #eef2ff; color: #0066FF; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card-shadow { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+        .copy-btn:hover { color: #0066FF; }
+        
+        /* Animation classes */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .zoom-in { animation: zoomIn 0.3s ease-out forwards; }
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 border-r bg-white flex flex-col fixed h-full z-10">
+            <div class="p-8 flex items-center gap-3">
+                <div class="w-10 h-10 bg-[#0066FF] rounded-lg flex items-center justify-center text-white font-bold text-xl">GL</div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">GASEOLLINK</h1>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">System</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 mt-4 space-y-2">
+                <button onclick="showTab('colors')" id="btn-colors" class="sidebar-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 transition-all">
+                    <i data-lucide="palette" class="w-5 h-5"></i>
+                    <span class="text-base">Colors</span>
+                </button>
+                <button onclick="showTab('typography')" id="btn-typography" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 transition-all">
+                    <i data-lucide="type" class="w-5 h-5"></i>
+                    <span class="text-base">Typography</span>
+                </button>
+                <button onclick="showTab('components')" id="btn-components" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 transition-all">
+                    <i data-lucide="box" class="w-5 h-5"></i>
+                    <span class="text-base">Components</span>
+                </button>
+                <button onclick="showTab('live')" id="btn-live" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 transition-all">
+                    <i data-lucide="layout" class="w-5 h-5"></i>
+                    <span class="text-base">Live Preview</span>
+                </button>
+            </nav>
+
+            <div class="p-4">
+                <button class="w-full bg-[#1A1A1A] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-colors text-base">
+                    Documentation
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Area -->
+        <main class="flex-1 ml-64 p-12">
+            
+            <!-- Section: Colors -->
+            <div id="section-colors" class="tab-content active fade-in">
+                <header class="mb-10">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                            <i data-lucide="palette" class="w-7 h-7"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold">Color Palette</h2>
+                    </div>
+                    <p class="text-slate-500 text-lg">가설링크의 브랜드 컬러는 신뢰와 전문성을 상징합니다. 건설 현장의 역동성과 안전을 고려하여 고대비 배색을 원칙으로 합니다.</p>
+                    <p class="text-slate-500 text-base">가설링크의 핵심 컬러 코드를 확인하고 복사할 수 있습니다.</p>
+                </header>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                    <!-- Brand Primary -->
+                    <div class="bg-white rounded-2xl overflow-hidden card-shadow border border-slate-100">
+                        <div class="h-32 bg-[#0066FF]"></div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-base">Brand Primary</span>
+                                <button onclick="copyToClipboard('#0066FF')" class="copy-btn text-slate-300 transition-colors"><i data-lucide="copy" class="w-[18px] h-[18px]"></i></button>
+                            </div>
+                            <p class="text-sm text-slate-400 font-mono mb-3">#0066FF</p>
+                            <p class="text-sm text-slate-500 leading-relaxed">신뢰와 전문성을 상징하며 주요 액션 버튼에 사용됩니다.</p>
+                        </div>
+                    </div>
+                    <!-- Deep Navy -->
+                    <div class="bg-white rounded-2xl overflow-hidden card-shadow border border-slate-100">
+                        <div class="h-32 bg-[#1A1A1A]"></div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-base">Deep Navy</span>
+                                <button onclick="copyToClipboard('#1A1A1A')" class="copy-btn text-slate-300 transition-colors"><i data-lucide="copy" class="w-[18px] h-[18px]"></i></button>
+                            </div>
+                            <p class="text-sm text-slate-400 font-mono mb-3">#1A1A1A</p>
+                            <p class="text-sm text-slate-500 leading-relaxed">텍스트와 배경의 대비를 높여 가독성을 확보합니다.</p>
+                        </div>
+                    </div>
+                    <!-- Soft Background -->
+                    <div class="bg-white rounded-2xl overflow-hidden card-shadow border border-slate-100">
+                        <div class="h-32 bg-[#F5F7FA]"></div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-base">Soft Background</span>
+                                <button onclick="copyToClipboard('#F5F7FA')" class="copy-btn text-slate-300 transition-colors"><i data-lucide="copy" class="w-[18px] h-[18px]"></i></button>
+                            </div>
+                            <p class="text-sm text-slate-400 font-mono mb-3">#F5F7FA</p>
+                            <p class="text-sm text-slate-500 leading-relaxed">깔끔하고 현대적인 느낌을 줍니다.</p>
+                        </div>
+                    </div>
+                    <!-- Accent Red -->
+                    <div class="bg-white rounded-2xl overflow-hidden card-shadow border border-slate-100">
+                        <div class="h-32 bg-[#FF4D4D]"></div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-base">Accent Red</span>
+                                <button onclick="copyToClipboard('#FF4D4D')" class="copy-btn text-slate-300 transition-colors"><i data-lucide="copy" class="w-[18px] h-[18px]"></i></button>
+                            </div>
+                            <p class="text-sm text-slate-400 font-mono mb-3">#FF4D4D</p>
+                            <p class="text-sm text-slate-500 leading-relaxed">경고, 배지, 그리고 부정적인 액션에 사용됩니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                    <h3 class="text-xl font-bold mb-6">Semantic Colors</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-[#00B478] rounded-lg"></div>
+                            <div>
+                                <p class="font-bold text-base">Success</p>
+                                <p class="text-sm text-slate-500">검수 완료, 거래 성사 등 긍정적인 상태를 나타낼 때 사용합니다.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-[#FF9900] rounded-lg"></div>
+                            <div>
+                                <p class="font-bold text-base">Warning</p>
+                                <p class="text-sm text-slate-500">배송 중, 결제 대기 등 주의가 필요한 진행 상태에 사용합니다.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-[#54A2FF] rounded-lg"></div>
+                            <div>
+                                <p class="font-bold text-base">Info</p>
+                                <p class="text-sm text-slate-500">가설재 규격 정보, 도움말 등 일반적인 안내에 사용합니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Typography -->
+            <div id="section-typography" class="tab-content fade-in">
+                <header class="mb-10">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                            <i data-lucide="type" class="w-7 h-7"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold">Typography</h2>
+                    </div>
+                    <p class="text-slate-500 text-lg">가설링크 타이포그래피 시스템은 모든 기기에서 최적의 가독성을 제공하도록 설계되었습니다. 현대적이고 깔끔한 산세리프 스타일을 지향합니다.</p>
+                    <p class="text-slate-500 text-base">서비스에서 사용되는 타이포그래피 위계(Hierarchy)를 시각화했습니다.</p>
+                </header>
+
+                <div class="bg-white p-12 rounded-3xl card-shadow border border-slate-100 mb-10">
+                    <div class="flex justify-between text-xs text-slate-300 font-bold mb-12 border-b pb-2 uppercase tracking-widest">
+                        <span>Headings (제목 스타일)</span>
+                        <span>Font: Pretendard / Inter</span>
+                    </div>
+
+                    <div class="space-y-16">
+                        <section>
+                            <h1 class="text-[60px] font-black leading-none tracking-tighter mb-4">Display Large</h1>
+                            <div class="text-blue-600 text-sm font-bold mb-2 uppercase">Size: 60px / Weight: 900 (Black) / Tracking: -0.05em</div>
+                            <p class="text-slate-500 text-base">메인 히어로 섹션이나 강력한 브랜드 메시지를 전달할 때 사용합니다. 자간(Tracking)을 좁게 설정하여 시각적인 밀도와 임팩트를 극대화합니다.</p>
+                        </section>
+
+                        <section>
+                            <h2 class="text-[36px] font-bold leading-tight tracking-tight mb-4">Headline 01</h2>
+                            <div class="text-blue-600 text-sm font-bold mb-2 uppercase">Size: 36px / Weight: 700 (Bold) / Tracking: -0.02em</div>
+                            <p class="text-slate-500 text-base">페이지의 주요 섹션 타이틀로 사용됩니다. 굵은 웨이트를 통해 정보의 위계를 명확히 구분합니다.</p>
+                        </section>
+
+                        <section>
+                            <h3 class="text-[24px] font-bold mb-4">Headline 02</h3>
+                            <div class="text-blue-600 text-sm font-bold mb-2 uppercase">Size: 24px / Weight: 700 (Bold)</div>
+                            <p class="text-slate-500 text-base">서브 섹션이나 카드 컴포넌트의 제목으로 주로 활용됩니다.</p>
+                        </section>
+
+                        <section>
+                            <h4 class="text-[20px] font-semibold mb-4">Headline 03</h4>
+                            <div class="text-blue-600 text-sm font-bold mb-2 uppercase">Size: 20px / Weight: 600 (Semibold)</div>
+                            <p class="text-slate-500 text-base">작은 그룹의 제목이나 강조가 필요한 리스트 항목에 사용합니다.</p>
+                        </section>
+                    </div>
+
+                    <div class="mt-20 pt-10 border-t">
+                         <div class="flex justify-between text-xs text-slate-300 font-bold mb-8 uppercase tracking-widest">
+                            <span>Body Text (본문 스타일)</span>
+                            <span>Line-height: 1.5 ~ 1.7</span>
+                        </div>
+                        <div class="space-y-10">
+                            <div>
+                                <p class="text-[18px] leading-[1.6] mb-2 font-medium">가설링크는 원활한 상품 구매 및 판매 경험을 제공합니다. 저희 플랫폼은 직관적이고 신뢰할 수 있도록 설계되었습니다.</p>
+                                <p class="text-blue-600 text-sm font-bold uppercase">Size: 18px / Leading: 1.6 (Relaxed)</p>
+                                <p class="text-slate-500 text-sm mt-1">리드 텍스트나 강조가 필요한 본문에 사용합니다. 충분한 줄 간격을 확보하여 가독성을 높입니다.</p>
+                            </div>
+                            <div>
+                                <p class="text-[16px] leading-[1.5] text-slate-600 mb-2">이것은 표준 본문 텍스트입니다. 긴 문장을 읽을 때 눈의 피로도를 줄이기 위해 적절한 행간과 폰트 크기를 유지합니다. 배경과의 대비(Contrast)를 7:1 이상으로 유지하여 접근성을 고려합니다.</p>
+                                <p class="text-blue-600 text-sm font-bold uppercase">Size: 16px / Leading: 1.5</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Design Principles -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                        <div class="text-blue-600 mb-4"><i data-lucide="activity" class="w-6 h-6"></i></div>
+                        <h4 class="font-bold mb-2 text-base">1. 위계의 명확성</h4>
+                        <p class="text-slate-500 text-sm leading-relaxed">폰트 크기와 웨이트의 차이를 극명하게 두어 사용자가 정보의 중요도를 즉각적으로 파악할 수 있게 합니다.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                        <div class="text-blue-600 mb-4"><i data-lucide="layout" class="w-6 h-6"></i></div>
+                        <h4 class="font-bold mb-2 text-base">2. 여백과 호흡</h4>
+                        <p class="text-slate-500 text-sm leading-relaxed">텍스트 주변의 충분한 화이트 스페이스를 확보하여 정보 과부하를 방지하고 시각적 편안함을 제공합니다.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                        <div class="text-blue-600 mb-4"><i data-lucide="activity" class="w-6 h-6"></i></div>
+                        <h4 class="font-bold mb-2 text-base">3. 숫자 데이터 강조</h4>
+                        <p class="text-slate-500 text-sm leading-relaxed">가격, 거리 등 핵심 숫자는 굵은 웨이트와 브랜드 컬러를 적용하여 시선이 가장 먼저 머물게 설계합니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Components -->
+            <div id="section-components" class="tab-content fade-in">
+                <header class="mb-10">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                            <i data-lucide="box" class="w-7 h-7"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold">Components</h2>
+                    </div>
+                    <p class="text-slate-500 text-lg">플랫폼 전반에서 일관성을 유지하는 재사용 가능한 UI 요소입니다. 접근성과 반응성을 고려하여 설계되었습니다.</p>
+                    <p class="text-slate-500 text-base">버튼, 입력창, 차량 카드 등 실제 사용되는 UI 요소들을 미리 볼 수 있습니다.</p>
+                </header>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <!-- Buttons -->
+                    <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                        <h4 class="font-bold mb-6 text-slate-800 text-lg">Buttons</h4>
+                        <div class="flex flex-wrap gap-4">
+                            <button class="px-6 py-3 bg-[#0066FF] text-white rounded-xl font-bold hover:bg-[#0052CC] transition-colors text-base">Primary Button</button>
+                            <button class="px-6 py-3 bg-slate-100 text-slate-800 rounded-xl font-bold hover:bg-slate-200 transition-colors text-base">Secondary</button>
+                            <button class="px-6 py-3 bg-white border border-slate-200 text-slate-800 rounded-xl font-bold hover:border-slate-400 transition-all text-base">Outline</button>
+                        </div>
+                    </div>
+
+                    <!-- Inputs -->
+                    <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                        <h4 class="font-bold mb-6 text-slate-800 text-lg">Inputs</h4>
+                        <div class="space-y-4">
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-4 flex items-center text-slate-400">
+                                    <i data-lucide="search" class="w-5 h-5"></i>
+                                </span>
+                                <input type="text" placeholder="Search for a item..." class="w-full pl-12 pr-4 py-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-blue-500 focus:ring-0 outline-none transition-all text-base">
+                            </div>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-base text-slate-600">I agree to the terms</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item Card -->
+                <div class="bg-white p-10 rounded-3xl card-shadow border border-slate-100">
+                    <h4 class="font-bold mb-8 text-slate-800 text-lg">Item Card</h4>
+                    <div class="max-w-xs bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-md">
+                        <div class="relative">
+                            <img src="https://picsum.photos/seed/construction/800/600" alt="Euro Form" class="w-full h-48 object-cover" referrerPolicy="no-referrer">
+                        </div>
+                        <div class="p-6">
+                            <div class="flex justify-between items-start mb-2">
+                                <h5 class="text-xl font-bold">Euro Form</h5>
+                                <span class="px-2 py-1 bg-blue-50 text-[#0066FF] text-xs font-bold rounded uppercase tracking-wider">1200 form</span>
+                            </div>
+                            <p class="text-sm text-slate-400 mb-6">600 * 1200</p>
+                            <div class="flex justify-between items-center">
+                                <p class="text-2xl font-black text-[#0066FF]">₩ 45,000</p>
+                                <button class="p-3 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors">
+                                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Live Preview -->
+            <div id="section-live" class="tab-content zoom-in">
+                <header class="mb-10">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                            <i data-lucide="layout" class="w-7 h-7"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold">Live Preview</h2>
+                    </div>
+                    <p class="text-slate-500 text-lg">실제 시나리오에서 디자인 토큰과 구성 요소가 어떻게 결합되는지 보여주는 모의 인터페이스입니다.</p>
+                    <p class="text-slate-500 text-base">디자인 가이드가 적용된 실제 가설링크 스타일의 랜딩 페이지 예시를 확인할 수 있습니다.</p>
+                </header>
+
+                <div class="bg-white rounded-[40px] overflow-hidden shadow-2xl min-h-[700px] flex flex-col border border-slate-100">
+                    <!-- Nav Bar Mock -->
+                    <div class="px-10 py-8 flex justify-between items-center border-b border-slate-50">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-[#0066FF] rounded flex items-center justify-center text-white text-base font-bold">GL</div>
+                            <span class="font-black text-lg tracking-tighter">GASEOLLINK</span>
+                        </div>
+                        <div class="hidden md:flex gap-10 text-base font-bold text-slate-800">
+                            <a href="#" class="text-[#0066FF]">상품등록</a>
+                            <a href="#" class="hover:text-blue-600 transition-colors">상품판매</a>
+                            <a href="#" class="hover:text-blue-600 transition-colors">견적의뢰</a>
+                        </div>
+                    </div>
+
+                    <!-- Hero Content -->
+                    <div class="flex-1 flex flex-col items-center justify-center text-center px-6 py-20">
+                        <div class="inline-flex items-center gap-2 bg-blue-50 px-5 py-2 rounded-full text-sm font-bold text-[#0066FF] mb-10">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            신뢰할 수 있는 상품 중계 플랫폼
+                        </div>
+                        
+                        <h1 class="text-[72px] font-black leading-[1.1] tracking-tighter mb-8">
+                            가설재를 사고 팔 때<br>
+                            <span class="text-[#0066FF]">가설링크 하나면 충분.</span>
+                        </h1>
+                        
+                        <p class="text-slate-400 text-xl mb-14 max-w-2xl leading-relaxed">
+                            중계 시스템을 통해 물건을 판매한 2,000명이 넘는 사용자들과 함께하세요. 투명한 가격과 신속한 거래를 약속합니다.
+                        </p>
+
+                        <!-- Hero Input Mock -->
+                        <div class="w-full max-w-3xl bg-white p-4 rounded-[32px] shadow-2xl flex flex-col md:flex-row gap-3 border border-slate-100">
+                            <div class="flex-1 relative flex items-center px-4">
+                                <input type="text" placeholder="품목을 입력하세요 (e.g. 유로폼)" class="w-full py-5 bg-transparent font-bold text-lg outline-none placeholder:text-slate-300">
+                            </div>
+                            <button class="bg-[#0066FF] text-white px-12 py-5 rounded-[24px] font-black text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-100">
+                                무료 견적 받기
+                            </button>
+                        </div>
+
+                        <!-- Stats Mock -->
+                        <div class="mt-24 flex gap-20 md:gap-32">
+                            <div class="text-center">
+                                <p class="text-3xl font-black">2,400+</p>
+                                <p class="text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">사용자</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-3xl font-black">1.2만+</p>
+                                <p class="text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">누적거래건수</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-3xl font-black">4.9/5</p>
+                                <p class="text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">사용자 만족도</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#1A1A1A] text-white px-8 py-4 rounded-full text-base font-bold opacity-0 transition-all pointer-events-none z-50 shadow-2xl">
+        Copied to clipboard!
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        function showTab(tabName) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active style from all sidebar items
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show current tab
+            document.getElementById('section-' + tabName).classList.add('active');
+            document.getElementById('btn-' + tabName).classList.add('active');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show Toast
+                const toast = document.getElementById('toast');
+                toast.style.opacity = '1';
+                toast.style.transform = 'translate(-50%, 0)';
+                
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translate(-50%, 20px)';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
+
